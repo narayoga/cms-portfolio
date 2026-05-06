@@ -1,0 +1,12 @@
+node_modules/
+vendor/
+dist/
+build/
+.env
+.env.local
+*.log
+.DS_Store
+backend/public/uploads/*
+!backend/public/uploads/.gitkeep
+.vscode/
+.idea/

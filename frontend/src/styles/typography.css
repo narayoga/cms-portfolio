@@ -1,0 +1,27 @@
+body {
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background: var(--color-bg);
+  font-size: 16px;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--color-secondary);
+}
+
+h1 { font-size: clamp(2rem, 4vw, 3rem); }
+h2 { font-size: clamp(1.6rem, 2.6vw, 2.2rem); }
+h3 { font-size: 1.4rem; }
+h4 { font-size: 1.15rem; }
+
+p { color: var(--color-text); }
+
+.text-muted { color: var(--color-text-muted); }
+.text-uppercase { text-transform: uppercase; letter-spacing: .08em; }
+.text-small { font-size: .875rem; }
+
+a:hover { color: var(--color-primary); }

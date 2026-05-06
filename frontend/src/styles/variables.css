@@ -1,0 +1,43 @@
+:root {
+  /* Brand palette — inspired by industrial/security tone (sag-locks-like) */
+  --color-primary: #c8102e;       /* deep red accent */
+  --color-primary-dark: #9d0c24;
+  --color-secondary: #1f2937;     /* slate */
+  --color-bg: #ffffff;
+  --color-bg-alt: #f5f6f8;
+  --color-bg-dark: #0f1720;
+  --color-text: #14181f;
+  --color-text-muted: #5b6573;
+  --color-border: #e4e7eb;
+  --color-success: #16a34a;
+  --color-danger: #dc2626;
+
+  /* Typography */
+  --font-sans: 'Inter', system-ui, -apple-system, Segoe UI, sans-serif;
+  --font-display: 'Manrope', 'Inter', system-ui, sans-serif;
+
+  /* Spacing scale */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+  --sp-8: 64px;
+  --sp-9: 96px;
+
+  /* Layout */
+  --container: 1440px;
+  --radius: 4px;
+  --radius-lg: 10px;
+
+  /* Effects */
+  --shadow-sm: 0 1px 2px rgba(15,23,32,.06), 0 1px 3px rgba(15,23,32,.08);
+  --shadow-md: 0 4px 6px -1px rgba(15,23,32,.08), 0 8px 16px -4px rgba(15,23,32,.06);
+  --shadow-lg: 0 10px 30px -5px rgba(15,23,32,.15);
+  --transition: 200ms cubic-bezier(.4,0,.2,1);
+
+  /* Header */
+  --header-h: 80px;
+}

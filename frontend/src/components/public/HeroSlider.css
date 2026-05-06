@@ -1,0 +1,217 @@
+/* ================================================================
+   HeroSlider.css
+   ================================================================ */
+
+/* ── Container ──────────────────────────────────────────────────── */
+.hero-slider {
+  position: relative;
+  height: 100vh;
+  margin-top: calc(-1 * var(--header-h)); /* pull up behind fixed header */
+  overflow: hidden;
+  background: var(--color-bg-dark);
+  user-select: none;
+  cursor: grab;
+  touch-action: pan-y;
+}
+.hero-slider:active { cursor: grabbing; }
+
+/* ── Individual slides ──────────────────────────────────────────── */
+.hero-slide {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  will-change: transform;
+}
+
+/* Default: off-screen right, no transition */
+.hero-slide.is-standby {
+  transform: translateX(100%);
+}
+
+/* Pre-positioned for prev direction: off-screen left, no transition */
+.hero-slide.is-pre {
+  transform: translateX(-100%);
+  z-index: 2;
+}
+
+/* Initial active slide (on mount, no animation) */
+.hero-slide.is-visible {
+  transform: translateX(0);
+  z-index: 2;
+}
+
+/* ── Slide-in animations ────────────────────────────────────────── */
+/* Next: new slide enters from right */
+.hero-slide.is-active.dir-next {
+  animation: slideInRight 0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  z-index: 2;
+}
+/* Prev: new slide enters from left */
+.hero-slide.is-active.dir-prev {
+  animation: slideInLeft 0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  z-index: 2;
+}
+
+/* ── Slide-out animations ───────────────────────────────────────── */
+/* Next: old slide exits to left */
+.hero-slide.is-exiting.dir-next {
+  animation: slideOutLeft 0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  z-index: 1;
+}
+/* Prev: old slide exits to right */
+.hero-slide.is-exiting.dir-prev {
+  animation: slideOutRight 0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  z-index: 1;
+}
+
+@keyframes slideInRight  { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes slideInLeft   { from { transform: translateX(-100%);} to { transform: translateX(0); } }
+@keyframes slideOutLeft  { from { transform: translateX(0); } to { transform: translateX(-100%);} }
+@keyframes slideOutRight { from { transform: translateX(0); } to { transform: translateX(100%); } }
+
+/* ── Slide content ──────────────────────────────────────────────── */
+.hero-slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(15, 23, 32, 0.7)  0%,
+    rgba(15, 23, 32, 0.3)  55%,
+    transparent            100%
+  );
+}
+
+.hero-content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  /* nudge text below the transparent fixed header */
+  padding-top: var(--header-h);
+}
+
+.hero-content h1 {
+  color: #fff;
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  font-weight: 800;
+  max-width: 620px;
+  line-height: 1.2;
+  margin: 0 0 var(--sp-4);
+  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.35);
+}
+
+.hero-content p {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.95rem;
+  line-height: 1.75;
+  max-width: 540px;
+  margin: 0 0 var(--sp-5);
+}
+
+/* ── CTA button ─────────────────────────────────────────────────── */
+.hero-btn {
+  display: inline-flex;
+  align-items: center;
+  background: #fff;
+  color: #0f1720;
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 12px 28px;
+  border-radius: var(--radius);
+  text-decoration: none;
+  transition: background 0.2s ease, transform 0.2s ease;
+  align-self: flex-start; /* don't stretch full width */
+}
+.hero-btn:hover {
+  background: rgba(255, 255, 255, 0.88);
+  transform: translateY(-1px);
+}
+
+/* ── Arrow buttons ──────────────────────────────────────────────── */
+.hero-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 52px;
+  height: 52px;
+  border-radius: 100%; /* full circle */
+  background: rgba(255, 255, 255, 0.15);
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+.hero-arrow:hover {
+  background: rgba(255, 255, 255, 0.28);
+  border-color: rgba(255, 255, 255, 0.7);
+  transform: translateY(-50%) scale(1.06);
+}
+.hero-arrow svg { width: 20px; height: 20px; }
+.hero-arrow--prev { left: 28px; }
+.hero-arrow--next { right: 28px; }
+
+/* ── Progress bars ──────────────────────────────────────────────── */
+.hero-progress {
+  position: absolute;
+  bottom: 32px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  z-index: 10;
+  padding: 0 var(--sp-6);
+}
+
+.hero-progress-track {
+  flex: 1;
+  max-width: 140px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.hero-progress-fill {
+  height: 100%;
+  width: 0;
+  background: var(--color-primary); /* red */
+  border-radius: 2px;
+}
+
+/* Completed slides: fill 100% instantly */
+.hero-progress-fill.is-done {
+  width: 100%;
+}
+
+/* Active slide: animate fill over DURATION ms */
+.hero-progress-fill.is-running {
+  animation: progressFill linear forwards;
+  /* animationDuration injected via inline style */
+}
+
+@keyframes progressFill {
+  from { width: 0%; }
+  to   { width: 100%; }
+}
+
+/* ── Empty state ────────────────────────────────────────────────── */
+.hero-empty {
+  background: var(--color-bg-alt);
+  padding-block: var(--sp-9);
+  text-align: center;
+}
