@@ -6,13 +6,14 @@
 .home-cats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  height: 520px;
+  padding-block: 80px;
   overflow: hidden;
   max-width: var(--container);
   margin: 0 auto;
 }
 
 .home-cat-card {
+  height: 520px;
   position: relative;
   overflow: hidden;
   display: block;
@@ -109,7 +110,7 @@
 .home-services {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  min-height: 540px;
+  padding-block: 80px;
   max-width: var(--container);
   margin: 0 auto;
 }
@@ -140,7 +141,7 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 80px 72px;
+  padding: 0 72px;
 }
 
 .home-services__eyebrow {
@@ -175,7 +176,10 @@
 /* ── 4. PROJECT MARQUEE ─────────────────────────────────────────── */
 .home-project-marquee {
   background: var(--color-bg-alt);
-  padding: var(--sp-8) 0 0;
+  padding-block: 80px;
+}
+
+.home-project-marquee__container {
   overflow: hidden;
 }
 
@@ -290,7 +294,7 @@
 /* ── 5. ABOUT / COPYWRITING ─────────────────────────────────────── */
 .home-about {
   background: var(--color-bg-dark);
-  padding: var(--sp-9) 0;
+  padding-block: 80px;
   overflow: hidden;
 }
 
@@ -383,7 +387,7 @@
 /* ── 6. OUR STORY ───────────────────────────────────────────────── */
 .home-story {
   background: var(--color-bg);
-  padding: var(--sp-9) 0;
+  padding-block: 80px;
 }
 
 .home-story__title {
@@ -491,7 +495,10 @@
 /* ── 7. PARTNER BRANDS MARQUEE ──────────────────────────────────── */
 .home-partners {
   background: var(--color-bg-alt);
-  padding: var(--sp-8) 0;
+  padding-block: 80px;
+}
+
+.home-partners__container {
   overflow: hidden;
 }
 
@@ -558,6 +565,10 @@
 
   .home-services__text-col {
     padding: 48px 32px;
+  }
+
+  .home-services__image-col {
+    min-height: 320px;
   }
 
   .home-services__img-placeholder {

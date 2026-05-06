@@ -14,12 +14,20 @@ export default function HeroSlider({ banners = [] }) {
   const [dir,     setDir]     = useState('next');
   const locked = useRef(false);
 
+  // Track a unique key per slide activation so content re-mounts
+  // and text animations restart every time a slide becomes active.
+  const activationCount = useRef(0);
+  const [contentSlotKey, setContentSlotKey] = useState({});
+
   /* ── Navigation ─────────────────────────────────────────── */
   const go = useCallback((nextIdx, direction) => {
     if (locked.current || nextIdx === idx) return;
     locked.current = true;
     setDir(direction);
     setExitIdx(idx);
+
+    const count = ++activationCount.current;
+    setContentSlotKey(prev => ({ ...prev, [nextIdx]: `act-${count}` }));
 
     if (direction === 'prev') {
       // Pre-position entering slide at -100% (left, no animation),
@@ -100,7 +108,7 @@ export default function HeroSlider({ banners = [] }) {
           <div key={b.id} className={cls}>
             <img src={mediaUrl(b.image_path)} alt={b.title || ''} draggable={false} />
             <div className="hero-overlay" />
-            <div className="container hero-content">
+            <div key={contentSlotKey[i] ?? `init-${i}`} className="container hero-content">
               {b.title    && <h1>{b.title}</h1>}
               {b.subtitle && <p>{b.subtitle}</p>}
               {b.link     && (
