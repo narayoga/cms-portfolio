@@ -69,6 +69,50 @@
 @keyframes slideOutLeft  { from { transform: translateX(0); } to { transform: translateX(-100%);} }
 @keyframes slideOutRight { from { transform: translateX(0); } to { transform: translateX(100%); } }
 
+/* ── Text reveal animation ──────────────────────────────────────── */
+
+/* All text starts hidden */
+.hero-content h1,
+.hero-content p,
+.hero-content .hero-btn {
+  opacity: 0;
+  transform: translateY(28px);
+}
+
+@keyframes heroTextIn {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+/* Entering slide: text animates in staggered after the slide arrives.
+   Same rule on is-visible so browser doesn't restart when class flips. */
+.hero-slide.is-active .hero-content h1,
+.hero-slide.is-visible .hero-content h1 {
+  animation: heroTextIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 0.5s;
+}
+
+.hero-slide.is-active .hero-content p,
+.hero-slide.is-visible .hero-content p {
+  animation: heroTextIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 0.75s;
+}
+
+.hero-slide.is-active .hero-content .hero-btn,
+.hero-slide.is-visible .hero-content .hero-btn {
+  animation: heroTextIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 1.0s;
+}
+
+/* Keep text visible while old slide exits — looks natural as frame slides out */
+.hero-slide.is-exiting .hero-content h1,
+.hero-slide.is-exiting .hero-content p,
+.hero-slide.is-exiting .hero-content .hero-btn {
+  opacity: 1;
+  transform: translateY(0);
+  animation: none;
+}
+
 /* ── Slide content ──────────────────────────────────────────────── */
 .hero-slide img {
   width: 100%;

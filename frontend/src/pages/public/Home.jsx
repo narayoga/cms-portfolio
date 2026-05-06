@@ -124,44 +124,44 @@ export default function Home() {
 
       {/* ── 4. PROJECT MARQUEE (2 rows, opposite directions) ── */}
       <section className="home-project-marquee">
-        <div className="container">
+        <div className="container home-project-marquee__container">
           <h2 className="home-project-marquee__headline">
             {settings.homepage_marquee_headline || 'We have solutions for every project and application'}
           </h2>
+          {marqueeProjects.length > 0 && (() => {
+            const mid = Math.ceil(marqueeProjects.length / 2);
+            const row1 = marqueeProjects.slice(0, mid);
+            const row2 = marqueeProjects.slice(mid);
+            const renderItem = (proj) => (
+              <Link
+                key={proj.id}
+                to={`/projects/${proj.slug}`}
+                className="marquee-proj-item"
+              >
+                {proj.cover_image
+                  ? <img
+                      src={`${import.meta.env.VITE_MEDIA_URL}${proj.cover_image}`}
+                      alt={proj.title}
+                    />
+                  : <div className="marquee-proj-item__placeholder">
+                      <span>{proj.title}</span>
+                    </div>
+                }
+                <span className="marquee-proj-item__label">{proj.title}</span>
+              </Link>
+            );
+            return (
+              <div className="home-project-marquee__rows">
+                <MarqueeStrip speed={45}>
+                  {row1.map(renderItem)}
+                </MarqueeStrip>
+                <MarqueeStrip speed={38} reverse={true}>
+                  {row2.map(renderItem)}
+                </MarqueeStrip>
+              </div>
+            );
+          })()}
         </div>
-        {marqueeProjects.length > 0 && (() => {
-          const mid = Math.ceil(marqueeProjects.length / 2);
-          const row1 = marqueeProjects.slice(0, mid);
-          const row2 = marqueeProjects.slice(mid);
-          const renderItem = (proj) => (
-            <Link
-              key={proj.id}
-              to={`/projects/${proj.slug}`}
-              className="marquee-proj-item"
-            >
-              {proj.cover_image
-                ? <img
-                    src={`${import.meta.env.VITE_MEDIA_URL}${proj.cover_image}`}
-                    alt={proj.title}
-                  />
-                : <div className="marquee-proj-item__placeholder">
-                    <span>{proj.title}</span>
-                  </div>
-              }
-              <span className="marquee-proj-item__label">{proj.title}</span>
-            </Link>
-          );
-          return (
-            <div className="home-project-marquee__rows">
-              <MarqueeStrip speed={45}>
-                {row1.map(renderItem)}
-              </MarqueeStrip>
-              <MarqueeStrip speed={38} reverse={true}>
-                {row2.map(renderItem)}
-              </MarqueeStrip>
-            </div>
-          );
-        })()}
       </section>
 
       {/* ── 5. ABOUT / COPYWRITING ─────────────────────── */}
@@ -228,24 +228,24 @@ export default function Home() {
       {/* ── 7. PARTNER BRANDS MARQUEE ──────────────────── */}
       {partnerBrands.length > 0 && (
         <section className="home-partners">
-          <div className="container">
+          <div className="container home-partners__container">
             <p className="home-partners__title">
               {settings.homepage_partners_title || 'Our partner brands'}
             </p>
+            <MarqueeStrip speed={35} reverse={false}>
+              {partnerBrands.map(brand => (
+                <div key={brand.id} className="marquee-brand-item">
+                  {brand.logo_path
+                    ? <img
+                        src={`${import.meta.env.VITE_MEDIA_URL}${brand.logo_path}`}
+                        alt={brand.name}
+                      />
+                    : <span className="marquee-brand-item__name">{brand.name}</span>
+                  }
+                </div>
+              ))}
+            </MarqueeStrip>
           </div>
-          <MarqueeStrip speed={35} reverse={false}>
-            {partnerBrands.map(brand => (
-              <div key={brand.id} className="marquee-brand-item">
-                {brand.logo_path
-                  ? <img
-                      src={`${import.meta.env.VITE_MEDIA_URL}${brand.logo_path}`}
-                      alt={brand.name}
-                    />
-                  : <span className="marquee-brand-item__name">{brand.name}</span>
-                }
-              </div>
-            ))}
-          </MarqueeStrip>
         </section>
       )}
     </>
