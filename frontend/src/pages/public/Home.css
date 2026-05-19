@@ -3,23 +3,49 @@
    ================================================================ */
 
 /* ── 2. CATEGORY CARDS ──────────────────────────────────────────── */
-.home-cats {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+.home-cats-section {
   padding-block: 80px;
-  overflow: hidden;
   max-width: var(--container);
   margin: 0 auto;
 }
 
+.home-cats-section__header {
+  text-align: left;
+  margin-bottom: 32px;
+  padding-inline: var(--sp-5);
+}
+
+.home-cats-section__title {
+  font-size: clamp(1.5rem, 2.9vw, 2.625rem);
+  font-weight: 800;
+  color: var(--color-text);
+  margin: 0 0 15px;
+  line-height: 1.2;
+}
+
+.home-cats-section__sub {
+  font-size: 0.95rem;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+  margin: 0 0 15px;
+}
+
+.home-cats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  padding-inline: var(--sp-5);
+}
+
 .home-cat-card {
-  height: 520px;
+  height: 480px;
   position: relative;
   overflow: hidden;
   display: block;
   text-decoration: none;
   color: inherit;
-  background: var(--color-secondary);
+  background: var(--color-bg-alt);
+  border-radius: var(--radius);
 }
 
 .home-cat-card img {
@@ -27,121 +53,68 @@
   height: 100%;
   object-fit: cover;
   display: block;
-  transition: transform 0.5s ease;
 }
 
 .home-cat-card__placeholder {
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, var(--color-secondary) 0%, #2d3748 100%);
+  background: #f0f0f0;
 }
 
-/* The dark gradient overlay — always visible at bottom */
-.home-cat-card__overlay {
+/* Top info panel — fade in at top on hover, no background */
+.home-cat-card__top-info {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    to top,
-    rgba(0, 0, 0, 0.82) 0%,
-    rgba(0, 0, 0, 0.30) 50%,
-    transparent 100%
-  );
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
-  padding: 28px 24px;
-  transition: background var(--transition);
+  opacity: 0;
+  transition: opacity 0.35s ease;
 }
 
-.home-cat-card:hover .home-cat-card__overlay {
-  background: linear-gradient(
-    to top,
-    rgba(0, 0, 0, 0.92) 0%,
-    rgba(0, 0, 0, 0.55) 50%,
-    rgba(0, 0, 0, 0.2) 100%
-  );
+.home-cat-card:hover .home-cat-card__top-info {
+  opacity: 1;
 }
 
-.home-cat-card:hover img {
-  transform: scale(1.06);
-}
-
-.home-cat-card__name {
-  color: #fff;
-  font-size: 1.15rem;
-  font-weight: 700;
-  margin: 0 0 8px;
-  letter-spacing: 0.01em;
-}
-
-/* Hover text — hidden by default, slides up on hover */
 .home-cat-card__hover {
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 0.85rem;
-  line-height: 1.5;
-  margin: 0 0 12px;
-  opacity: 0;
-  transform: translateY(10px);
-  transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
-.home-cat-card:hover .home-cat-card__hover {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.home-cat-card__cta {
-  color: var(--color-primary);
-  font-size: 0.82rem;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  opacity: 0;
-  transform: translateY(8px);
-  transition: opacity 0.3s ease 0.05s, transform 0.3s ease 0.05s;
-}
-
-.home-cat-card:hover .home-cat-card__cta {
-  opacity: 1;
-  transform: translateY(0);
+  color: var(--color-text-muted);
+  font-size: 0.88rem;
+  line-height: 1.55;
+  margin: 45px 10px 0 0;
 }
 
 /* ── 3. PROFESSIONAL SERVICES ───────────────────────────────────── */
 .home-services {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  align-items: flex-start;
+  gap: 56px;
   padding-block: 80px;
+  padding-inline: var(--sp-5);
   max-width: var(--container);
   margin: 0 auto;
 }
 
 .home-services__image-col {
-  position: relative;
-  overflow: hidden;
-  background: var(--color-secondary);
+  flex-shrink: 0;
 }
 
 .home-services__image-col img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  width: 375px;
+  height: auto;
   display: block;
 }
 
 .home-services__img-placeholder {
-  width: 100%;
-  height: 100%;
-  min-height: 540px;
-  background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+  width: 375px;
+  min-height: 300px;
+  background: #f0f0f0;
 }
 
 .home-services__text-col {
-  background: var(--color-bg-dark);
-  color: #fff;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  padding: 0 72px;
+  justify-content: flex-start;
+  max-width: 480px;
+  padding: 0;
 }
 
 .home-services__eyebrow {
@@ -154,28 +127,41 @@
 }
 
 .home-services__headline {
-  font-size: clamp(1.6rem, 2.8vw, 2.4rem);
+  font-size: clamp(1.5rem, 2.9vw, 2.625rem);
   font-weight: 800;
   line-height: 1.2;
-  color: #fff;
+  color: var(--color-text);
   margin: 0 0 20px;
 }
 
 .home-services__sub {
   font-size: 1rem;
   line-height: 1.7;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--color-text-muted);
   margin: 0 0 36px;
-  max-width: 480px;
 }
 
 .home-services__btn {
   align-self: flex-start;
+  background: #000;
+  color: #fff;
+  border: none;
+  padding: 14px 28px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-block;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.home-services__btn:hover {
+  opacity: 0.8;
 }
 
 /* ── 4. PROJECT MARQUEE ─────────────────────────────────────────── */
 .home-project-marquee {
-  background: var(--color-bg-alt);
+  background: var(--color-bg);
   padding-block: 80px;
 }
 
@@ -184,12 +170,21 @@
 }
 
 .home-project-marquee__headline {
-  text-align: center;
-  font-size: clamp(1.3rem, 2.5vw, 1.9rem);
+  text-align: left;
+  font-size: clamp(1.5rem, 2.9vw, 2.625rem);
   font-weight: 800;
   color: var(--color-text);
-  margin: 0 0 var(--sp-7);
-  padding: 0 var(--sp-5);
+  margin: 0 0 12px;
+  padding: 0;
+}
+
+.home-project-marquee__sub {
+  text-align: left;
+  font-size: 0.95rem;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+  margin: 0 0 12px;
+  padding: 0;
 }
 
 .home-project-marquee__rows {
@@ -233,8 +228,8 @@
 /* Individual project item in marquee */
 .marquee-proj-item {
   flex-shrink: 0;
-  width: 300px;
-  height: 220px;
+  width: auto;
+  height: 250px;
   border-radius: var(--radius);
   overflow: hidden;
   position: relative;
@@ -248,11 +243,6 @@
   height: 100%;
   object-fit: cover;
   display: block;
-  transition: transform 0.4s ease;
-}
-
-.marquee-proj-item:hover img {
-  transform: scale(1.05);
 }
 
 .marquee-proj-item__placeholder {
@@ -275,57 +265,58 @@
 
 .marquee-proj-item__label {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: linear-gradient(to top, rgba(0,0,0,.75) 0%, transparent);
-  color: #fff;
-  font-size: 0.78rem;
-  font-weight: 600;
-  padding: 20px 12px 10px;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.35s ease;
+}
+
+.marquee-proj-item__label span {
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.4;
+  transform: translateY(12px);
+  transition: transform 0.35s ease;
 }
 
 .marquee-proj-item:hover .marquee-proj-item__label {
   opacity: 1;
 }
 
+.marquee-proj-item:hover .marquee-proj-item__label span {
+  transform: translateY(0);
+}
+
 /* ── 5. ABOUT / COPYWRITING ─────────────────────────────────────── */
 .home-about {
-  background: var(--color-bg-dark);
+  background: var(--color-bg);
   padding-block: 80px;
   overflow: hidden;
 }
 
-.home-about > .container {
-  max-width: var(--container);
-}
-
 .home-about__inner {
-  display: grid;
-  grid-template-columns: 220px 1fr;
-  gap: 72px;
-  align-items: center;
-}
-
-.home-about__logo-col {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 28px;
 }
 
 .home-about__logo-img {
-  max-width: 200px;
+  max-width: 180px;
   width: 100%;
   height: auto;
-  filter: brightness(0) invert(1); /* make logo white */
 }
 
 .home-about__logo-placeholder {
   width: 180px;
   height: 80px;
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  border: 2px solid var(--color-border);
   border-radius: var(--radius);
   display: flex;
   align-items: center;
@@ -333,27 +324,31 @@
 }
 
 .home-about__logo-placeholder span {
-  color: rgba(255, 255, 255, 0.3);
+  color: var(--color-text-muted);
   font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.1em;
 }
 
-.home-about__text-col {
-  color: rgba(255, 255, 255, 0.85);
+.home-about__title {
+  font-size: clamp(1.5rem, 2.9vw, 2.625rem);
+  font-weight: 800;
+  color: #000;
+  line-height: 1.15;
+  margin: 0;
 }
 
 .home-about__body {
   font-size: 1rem;
   line-height: 1.75;
-  margin: 0 0 var(--sp-6);
-  max-width: 680px;
+  color: #000;
+  margin: 0;
 }
 
 .home-about__rotating-line {
   font-size: clamp(1.4rem, 2.5vw, 2rem);
   font-weight: 800;
-  color: #fff;
+  color: #000;
   margin: 0;
   display: flex;
   align-items: center;
@@ -364,7 +359,7 @@
 }
 
 .home-about__static-text {
-  color: rgba(255, 255, 255, 0.8);
+  color: #000;
 }
 
 /* Animated word transitions */
@@ -391,7 +386,7 @@
 }
 
 .home-story__title {
-  font-size: clamp(1.8rem, 3vw, 2.6rem);
+  font-size: clamp(1.5rem, 2.9vw, 2.625rem);
   font-weight: 800;
   margin: 0 0 var(--sp-8);
   color: var(--color-text);
@@ -409,38 +404,52 @@
   background: var(--color-primary);
 }
 
-.story-timeline {
+/* Two-column layout: scrollable list left, sticky images right */
+.story-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 2px;
-  position: relative;
+  gap: 64px;
+  align-items: start;
 }
 
-/* Vertical center line */
-.story-timeline::before {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 0;
-  bottom: 0;
-  width: 1px;
+/* ── Left: scrollable list ── */
+.story-list {
+  height: 520px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+  padding-right: 8px;
+}
+
+.story-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.story-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.story-list::-webkit-scrollbar-thumb {
   background: var(--color-border);
-  transform: translateX(-50%);
+  border-radius: 2px;
 }
 
-.story-item {
-  padding: 32px 48px 32px 0;
-  position: relative;
-  grid-column: 1;
+.story-list-item {
+  padding: 28px 0 28px 24px;
+  border-left: 2px solid var(--color-border);
+  cursor: default;
+  transition: border-color 0.3s ease;
 }
 
-.story-item--right {
-  grid-column: 2;
-  padding: 32px 0 32px 48px;
+.story-list-item + .story-list-item {
+  margin-top: 4px;
 }
 
-/* Year badge */
-.story-item__year {
+.story-list-item--active {
+  border-left-color: var(--color-primary);
+}
+
+.story-list-item__year {
   font-size: 2rem;
   font-weight: 900;
   color: var(--color-primary);
@@ -449,52 +458,50 @@
   letter-spacing: -0.02em;
 }
 
-.story-item__content {
+.story-list-item__text {
   font-size: 0.92rem;
-  line-height: 1.7;
+  line-height: 1.75;
   color: var(--color-text-muted);
-}
-
-.story-item__content p {
   margin: 0;
 }
 
-/* Story image */
-.story-item__image {
-  margin-top: 16px;
-  border-radius: var(--radius);
-  overflow: hidden;
-  max-width: 360px;
+/* ── Right: stacked images ── */
+.story-images {
+  position: sticky;
+  top: 100px;
+  height: 520px;
 }
 
-.story-item__image img {
+.story-image {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius);
+  overflow: hidden;
+  opacity: 0;
+  transform: scale(0.9);
+  transition: opacity 0.55s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.story-image--active {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+  z-index: 2;
+}
+
+.story-image img {
   width: 100%;
-  height: 200px;
+  height: 100%;
   object-fit: cover;
   display: block;
 }
 
-/* Connector dot on the timeline */
-.story-item::after {
-  content: '';
-  position: absolute;
-  top: 38px;
-  right: -6px;
-  width: 11px;
-  height: 11px;
-  background: var(--color-primary);
-  border-radius: 50%;
-  border: 2px solid var(--color-bg);
-}
-
-.story-item--right::after {
-  right: auto;
-  left: -6px;
-}
-
 /* ── 7. PARTNER BRANDS MARQUEE ──────────────────────────────────── */
 .home-partners {
-  background: var(--color-bg-alt);
+  background: var(--color-bg);
   padding-block: 80px;
 }
 
@@ -522,7 +529,7 @@
 }
 
 .marquee-brand-item img {
-  height: 40px;
+  height: 30px;
   width: auto;
   object-fit: contain;
   filter: grayscale(1);
@@ -556,53 +563,39 @@
   }
 
   .home-cat-card {
-    height: 280px;
+    height: 300px;
   }
 
   .home-services {
-    grid-template-columns: 1fr;
+    flex-direction: column;
+    gap: 32px;
+  }
+
+  .home-services__image-col img,
+  .home-services__img-placeholder {
+    width: 100%;
+    max-width: 375px;
   }
 
   .home-services__text-col {
-    padding: 48px 32px;
-  }
-
-  .home-services__image-col {
-    min-height: 320px;
-  }
-
-  .home-services__img-placeholder {
-    min-height: 320px;
+    max-width: 100%;
+    padding: 0;
   }
 
   .home-about__inner {
+    gap: 24px;
+  }
+
+  .story-layout {
     grid-template-columns: 1fr;
-    gap: 40px;
+    gap: 32px;
   }
 
-  .home-about__logo-col {
-    justify-content: flex-start;
-  }
-
-  .story-timeline {
-    grid-template-columns: 1fr;
-  }
-
-  .story-timeline::before {
-    left: 0;
-  }
-
-  .story-item,
-  .story-item--right {
-    grid-column: 1;
-    padding: 24px 0 24px 28px;
-    border-left: 1px solid var(--color-border);
-  }
-
-  .story-item::after,
-  .story-item--right::after {
-    left: -6px;
-    right: auto;
+  .story-images {
+    position: relative;
+    top: 0;
+    height: 320px;
+    order: -1;
   }
 }
 
@@ -610,25 +603,15 @@
   .home-cats {
     grid-template-columns: 1fr 1fr;
     height: auto;
+    gap: 10px;
   }
 
   .home-cat-card {
-    height: 220px;
+    height: 240px;
   }
 
-  .home-cat-card__hover {
+  .home-cat-card__top-info {
     opacity: 1;
-    transform: none;
-    font-size: 0.75rem;
-  }
-
-  .home-cat-card__cta {
-    opacity: 1;
-    transform: none;
-  }
-
-  .home-services__text-col {
-    padding: 40px 24px;
   }
 
   .home-about__inner {
@@ -648,9 +631,10 @@
 @media (max-width: 480px) {
   .home-cats {
     grid-template-columns: 1fr;
+    gap: 10px;
   }
 
   .home-cat-card {
-    height: 200px;
+    height: 220px;
   }
 }
