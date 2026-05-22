@@ -51,6 +51,10 @@
   width: auto;
   transition: filter 0.35s ease;
 }
+/* Logo putih saat header transparan (top of hero) */
+.site-header.is-hero .logo img {
+  filter: brightness(0) invert(1);
+}
 
 /* ── Nav links ── */
 .nav {

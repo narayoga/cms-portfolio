@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useFetch } from '../../hooks/useFetch';
 import HeroSlider from '../../components/public/HeroSlider.jsx';
 import { useEffect, useState } from 'react';
@@ -57,6 +57,16 @@ function MarqueeStrip({ children, speed = 40, reverse = false }) {
 export default function Home() {
   const { data, loading } = useFetch('/public/homepage', []);
   const [activeStory, setActiveStory] = useState(0);
+  const location = useLocation();
+
+  // Scroll to hash target (e.g. #about) once content is rendered
+  useEffect(() => {
+    if (loading || !location.hash) return;
+    const id = location.hash.slice(1);
+    requestAnimationFrame(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+    });
+  }, [loading, location.hash]);
 
   if (loading) return <div className="spinner" />;
 
@@ -171,7 +181,7 @@ export default function Home() {
       </section>
 
       {/* ── 5. ABOUT / COPYWRITING ─────────────────────── */}
-      <section className="home-about">
+      <section className="home-about" id="about">
         <div className="container home-about__inner">
           {settings.homepage_about_logo
             ? <img

@@ -1,4 +1,4 @@
-import { NavLink, Link, useLocation } from 'react-router-dom';
+import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { api, mediaUrl } from '../../api/client';
 import './Header.css';
@@ -7,31 +7,11 @@ const LOGO_PATH = '/uploads/15_SAG-warna-ri4cltobofltnbnvjndxax4uuic9o83fh7mq7ac
 
 const MEGA_KEYS = ['products', 'services', 'download center'];
 
-const dummyItems = (prefix) =>
-  Array.from({ length: 4 }, (_, i) => ({
-    label: `${prefix}-${i + 1}`,
-    children: Array.from({ length: 5 }, (__, j) => `Sub-${prefix.toLowerCase()}-${i + 1}-${j + 1}`),
-  }));
-
-const MEGA_DATA = {
-  products: {
-    title: 'Solutions',
-    subtitle: 'Solutions For Your Area Of Use',
-    cta: 'Explore Products',
-    items: dummyItems('Menu'),
-  },
-  services: {
-    title: 'Services',
-    subtitle: 'Support For Every Stage',
-    cta: 'Explore Services',
-    items: dummyItems('Menu'),
-  },
-  'download center': {
-    title: 'Downloads',
-    subtitle: 'Resources & Documentation',
-    cta: 'Browse Downloads',
-    items: dummyItems('Menu'),
-  },
+// Static left-panel content per mega key. `items` for products is filled from DB.
+const MEGA_META = {
+  products: { title: 'Solutions', subtitle: 'Solutions For Your Area Of Use', cta: 'Explore Products', ctaUrl: '/products' },
+  services: { title: 'Services', subtitle: 'Support For Every Stage', cta: 'Explore Services', ctaUrl: '/services' },
+  'download center': { title: 'Downloads', subtitle: 'Resources & Documentation', cta: 'Browse Downloads', ctaUrl: '/download-center' },
 };
 
 function ChevronDown() {
@@ -50,22 +30,22 @@ function ChevronRight() {
   );
 }
 
-function MegaMenu({ data }) {
+function MegaMenu({ meta, items, onNavigate }) {
   const [activeIdx, setActiveIdx] = useState(null);
-  const active = activeIdx !== null ? data.items[activeIdx] : null;
+  const active = activeIdx !== null ? items[activeIdx] : null;
 
   return (
     <div className="mega-inner">
       <div className="mega-left">
         <div className="mega-image" />
-        <h3 className="mega-title">{data.title}</h3>
-        <p className="mega-subtitle">{data.subtitle}</p>
-        <a className="mega-cta" href="#">{data.cta}</a>
+        <h3 className="mega-title">{meta.title}</h3>
+        <p className="mega-subtitle">{meta.subtitle}</p>
+        <Link className="mega-cta" to={meta.ctaUrl} onClick={onNavigate}>{meta.cta}</Link>
       </div>
 
       <div className="mega-right">
         <ul className="mega-col mega-col-primary">
-          {data.items.map((it, i) => (
+          {items.map((it, i) => (
             <li key={it.label}>
               <button
                 type="button"
@@ -81,8 +61,8 @@ function MegaMenu({ data }) {
 
         <ul className="mega-col mega-col-secondary" key={activeIdx ?? 'empty'}>
           {active && active.children.map((c) => (
-            <li key={c}>
-              <a className="mega-subitem" href="#">{c}</a>
+            <li key={c.url || c.label}>
+              <Link className="mega-subitem" to={c.url} onClick={onNavigate}>{c.label}</Link>
             </li>
           ))}
         </ul>
@@ -97,7 +77,9 @@ export default function Header() {
   const [siteName, setSiteName] = useState('');
   const [navLinks, setNavLinks] = useState([]);
   const [openMega, setOpenMega] = useState(null);
+  const [productItems, setProductItems] = useState([]);
   const location = useLocation();
+  const navigate = useNavigate();
   const closeTimer = useRef(null);
 
   const isHero = location.pathname === '/' && !scrolled && !openMega;
@@ -122,6 +104,20 @@ export default function Header() {
     api.get('/public/nav-menus')
       .then(menus => { if (menus?.header) setNavLinks(menus.header); })
       .catch(() => {});
+
+    api.get('/public/categories')
+      .then(cats => {
+        if (Array.isArray(cats)) {
+          setProductItems(cats.map(c => ({
+            label: c.name,
+            children: (c.subcategories || []).map(s => ({
+              label: s.name,
+              url: `/products/${c.slug}/${s.slug}`,
+            })),
+          })));
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const scheduleClose = () => {
@@ -130,9 +126,25 @@ export default function Header() {
   };
   const cancelClose = () => clearTimeout(closeTimer.current);
 
+  const closeAll = () => { setOpen(false); setOpenMega(null); };
+
   const megaKeyFor = (label) => {
     const k = label?.trim().toLowerCase();
     return MEGA_KEYS.includes(k) ? k : null;
+  };
+
+  const itemsFor = (key) => (key === 'products' ? productItems : []);
+
+  const handleAnchor = (e, url) => {
+    e.preventDefault();
+    closeAll();
+    const hash = url.split('#')[1];
+    if (!hash) return;
+    if (location.pathname === '/') {
+      document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      navigate(`/#${hash}`);
+    }
   };
 
   return (
@@ -177,18 +189,33 @@ export default function Header() {
                       <ChevronDown />
                     </button>
                     <div className="mega-wrap" aria-hidden={!isOpen}>
-                      <MegaMenu data={MEGA_DATA[mk]} />
+                      <MegaMenu meta={MEGA_META[mk]} items={itemsFor(mk)} onNavigate={closeAll} />
                     </div>
                   </div>
                 );
               }
+
+              if (link.url.includes('#')) {
+                return (
+                  <a
+                    key={link.id}
+                    href={link.url}
+                    className="nav-link"
+                    onClick={(e) => handleAnchor(e, link.url)}
+                    onMouseEnter={() => { cancelClose(); setOpenMega(null); }}
+                  >
+                    {link.label}
+                  </a>
+                );
+              }
+
               return (
                 <NavLink
                   key={link.id}
                   to={link.url}
                   end={link.url === '/'}
                   className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-                  onClick={() => { setOpen(false); setOpenMega(null); }}
+                  onClick={closeAll}
                   onMouseEnter={() => { cancelClose(); setOpenMega(null); }}
                 >
                   {link.label}

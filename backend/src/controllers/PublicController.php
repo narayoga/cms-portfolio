@@ -50,6 +50,13 @@ class PublicController
     public function categories(): void
     {
         $rows = Db::all('SELECT id, name, slug, image_path, description FROM categories WHERE is_active = 1 ORDER BY sort_order ASC, id ASC');
+        foreach ($rows as &$row) {
+            $row['subcategories'] = Db::all(
+                'SELECT id, name, slug, image_path FROM subcategories WHERE category_id = ? AND is_active = 1 ORDER BY sort_order ASC, id ASC',
+                [$row['id']]
+            );
+        }
+        unset($row);
         Response::ok($rows);
     }
 
