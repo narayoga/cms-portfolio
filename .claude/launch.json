@@ -14,6 +14,13 @@
       "runtimeArgs": ["-S", "localhost:8000", "-t", "public", "public/router.php"],
       "cwd": "D:\\javascript-projects\\82cart\\CMS-portfolio\\backend",
       "port": 8000
+    },
+    {
+      "name": "backend-express",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "D:\\javascript-projects\\82cart\\CMS-portfolio\\backend-express",
+      "port": 8001
     }
   ]
 }
