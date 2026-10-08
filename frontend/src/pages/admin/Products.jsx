@@ -97,7 +97,7 @@ export default function Products() {
             <label><span>Slug (auto if blank)</span><input value={form.slug || ''} onChange={set('slug')} /></label>
           </div>
           <label><span>Short description</span><textarea value={form.short_desc || ''} onChange={set('short_desc')} /></label>
-          <ImageUpload value={form.cover_image} onChange={(v) => setForm(f => ({ ...f, cover_image: v }))} label="Cover image" />
+          <ImageUpload value={form.cover_image} onChange={(v) => setForm(f => ({ ...f, cover_image: v }))} label="Cover image" folder="products" />
 
           <div>
             <span style={{ fontSize: '.85rem', fontWeight: 600, display: 'block', marginBottom: 6 }}>Gallery images</span>
@@ -109,7 +109,7 @@ export default function Products() {
                 </div>
               ))}
             </div>
-            <ImageUpload value="" onChange={addGalleryImg} label="" />
+            <ImageUpload value="" onChange={addGalleryImg} label="" folder="products" />
           </div>
 
           <RichTextEditor value={form.content_html} onChange={(v) => setForm(f => ({ ...f, content_html: v }))} label="Description (rich content)" />

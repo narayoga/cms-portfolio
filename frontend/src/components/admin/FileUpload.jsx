@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { api } from '../../api/client';
 
-export default function FileUpload({ value, onChange, label = 'File' }) {
+export default function FileUpload({ value, onChange, label = 'File', folder = 'misc' }) {
   const ref = useRef();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -12,7 +12,7 @@ export default function FileUpload({ value, onChange, label = 'File' }) {
     setBusy(true);
     setErr('');
     try {
-      const r = await api.upload(f, 'file');
+      const r = await api.upload(f, 'file', folder);
       onChange?.(r.path);
     } catch (e2) {
       setErr(e2.message);

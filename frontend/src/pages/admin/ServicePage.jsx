@@ -37,6 +37,7 @@ export default function ServicePage() {
             value={form.hero_image}
             onChange={(v) => setForm(f => ({ ...f, hero_image: v }))}
             label="Hero image (optional)"
+            folder="site/services"
           />
           <RichTextEditor
             value={form.content_html}

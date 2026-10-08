@@ -10,7 +10,8 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "compare-api": "tsx scripts/compare-api.ts",
-    "compare-writes": "tsx scripts/compare-writes.ts"
+    "compare-writes": "tsx scripts/compare-writes.ts",
+    "uploads:reorganize": "tsx scripts/reorganize-uploads.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

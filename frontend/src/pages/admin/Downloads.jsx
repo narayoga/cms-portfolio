@@ -76,8 +76,8 @@ export default function Downloads() {
             </label>
           </div>
           <label><span>Description</span><textarea value={form.description || ''} onChange={set('description')} /></label>
-          <ImageUpload value={form.image_path} onChange={(v) => setForm(f => ({ ...f, image_path: v }))} label="Thumbnail image" />
-          <FileUpload value={form.file_path} onChange={(v) => setForm(f => ({ ...f, file_path: v }))} label="Downloadable file" />
+          <ImageUpload value={form.image_path} onChange={(v) => setForm(f => ({ ...f, image_path: v }))} label="Thumbnail image" folder="downloads/thumbnails" />
+          <FileUpload value={form.file_path} onChange={(v) => setForm(f => ({ ...f, file_path: v }))} label="Downloadable file" folder="downloads/files" />
           <div className="form-row">
             <label><span>Sort order</span><input type="number" value={form.sort_order} onChange={set('sort_order')} /></label>
             <label style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
