@@ -1,11 +1,14 @@
 import path from 'node:path';
 import dotenv from 'dotenv';
 
-// The project root is one folder above "src"
+// The backend-express folder (one folder above "src")
 export const PROJECT_ROOT = path.resolve(import.meta.dirname, '..', '..');
 
-// Load variables from backend-express/.env into process.env
-dotenv.config({ path: path.join(PROJECT_ROOT, '.env'), quiet: true });
+// The repository root, where the shared .env file with all secrets lives
+export const REPOSITORY_ROOT = path.resolve(PROJECT_ROOT, '..');
+
+// Load variables from the root .env into process.env
+dotenv.config({ path: path.join(REPOSITORY_ROOT, '.env'), quiet: true });
 
 /**
  * Read an environment variable.

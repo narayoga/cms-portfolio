@@ -4,7 +4,7 @@ declare(strict_types=1);
 require __DIR__ . '/../vendor/autoload.php';
 require __DIR__ . '/../config/env.php';
 
-loadEnv(__DIR__ . '/../.env');
+loadEnv(__DIR__ . '/../../.env');
 
 // CORS
 $origin = env('FRONTEND_ORIGIN', '*');
