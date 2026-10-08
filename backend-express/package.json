@@ -8,7 +8,9 @@
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts",
     "build": "tsc",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "compare-api": "tsx scripts/compare-api.ts",
+    "compare-writes": "tsx scripts/compare-writes.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

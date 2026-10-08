@@ -216,3 +216,19 @@ export function splitImageList(text: string | null): string[] {
 
   return images;
 }
+
+/**
+ * Convert any value to trimmed text. null / undefined become "".
+ * (Same as PHP: trim((string) $value))
+ */
+export function toCleanText(value: any): string {
+  if (value === undefined || value === null || value === false) {
+    return '';
+  }
+
+  if (value === true) {
+    return '1';
+  }
+
+  return String(value).trim();
+}

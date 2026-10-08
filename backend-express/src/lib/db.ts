@@ -2,8 +2,9 @@ import mysql from 'mysql2/promise';
 import type { RowDataPacket, ResultSetHeader } from 'mysql2/promise';
 import { getEnv, getEnvNumber } from '../config/env';
 
-// A value that can be passed into a "?" placeholder in a SQL query
-export type SqlValue = string | number | boolean | null | Date;
+// A value that can be passed into a "?" placeholder in a SQL query.
+// A list (for example ["a", "b"]) is turned into  'a', 'b'  for use with IN (?)
+export type SqlValue = string | number | boolean | null | Date | (string | number)[];
 
 // One connection pool shared by the whole app.
 // The pool opens connections when needed and re-uses them between requests.
