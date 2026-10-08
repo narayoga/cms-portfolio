@@ -11,7 +11,11 @@
     "typecheck": "tsc --noEmit",
     "compare-api": "tsx scripts/compare-api.ts",
     "compare-writes": "tsx scripts/compare-writes.ts",
-    "uploads:reorganize": "tsx scripts/reorganize-uploads.ts"
+    "uploads:reorganize": "tsx scripts/reorganize-uploads.ts",
+    "db:migrate": "tsx scripts/db-migrate.ts",
+    "db:create-admin": "tsx scripts/db-create-admin.ts",
+    "db:export": "tsx scripts/db-export.ts",
+    "db:import": "tsx scripts/db-import.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
