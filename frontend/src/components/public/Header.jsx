@@ -5,7 +5,7 @@ import { cachedGet, gatedGet } from '../../api/cache';
 import SmoothImg from './SmoothImg.jsx';
 import './Header.css';
 
-const LOGO_PATH = '/uploads/15_SAG-warna-ri4cltobofltnbnvjndxax4uuic9o83fh7mq7ac1wy.png';
+const LOGO_PATH = '/uploads/site/logo/sag-warna.png';
 
 const MEGA_KEYS = ['products', 'services', 'download center'];
 
@@ -15,12 +15,12 @@ const MEGA_META = {
   products: {
     title: 'Solutions', subtitle: 'Solutions For Your Area Of Use',
     cta: 'Explore Products', ctaUrl: '/products',
-    image: '/uploads/mega-menu-products.webp',
+    image: '/uploads/site/mega-menu/mega-menu-products.webp',
   },
   services: {
     title: 'Solutions', subtitle: 'Professional Door Hardware Care',
     cta: 'Explore Service', ctaUrl: '/services',
-    image: '/uploads/mega-menu-banner.jpg',
+    image: '/uploads/site/mega-menu/mega-menu-banner.jpg',
     items: [
       { label: 'Specifications', url: '/services#specifications' },
       { label: 'After Sales', url: '/services#after-sales' },
@@ -29,7 +29,7 @@ const MEGA_META = {
   'download center': {
     title: 'Solutions', subtitle: 'All Resources In One Place',
     cta: 'Explore Download Center', ctaUrl: '/download-center',
-    image: '/uploads/mega-menu-download.webp',
+    image: '/uploads/site/mega-menu/mega-menu-download.webp',
     items: [
       { label: 'Product Catalogues', url: '/download-center#catalogues' },
       { label: 'Product Manuals', url: '/download-center#manuals' },

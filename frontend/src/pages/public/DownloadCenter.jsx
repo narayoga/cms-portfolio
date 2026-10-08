@@ -5,7 +5,7 @@ import { mediaUrl } from '../../api/client';
 import SmoothImg from '../../components/public/SmoothImg.jsx';
 import './DownloadCenter.css';
 
-const BANNER = '/uploads/Web-Banner-Download-Center.jpg';
+const BANNER = '/uploads/site/download-center/web-banner-download-center.jpg';
 
 function DownloadIcon() {
   return (
