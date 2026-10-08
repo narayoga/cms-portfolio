@@ -57,10 +57,10 @@ function MarqueeStrip({ children, speed = 40, reverse = false }) {
    image + description linking to its product page. Images live in
    backend/public/uploads. Edit this list to change the homepage lineup. */
 const HOME_CATEGORIES = [
-  { name: 'Door Hardware',    description: 'Proven solutions for every kind of security needs',   image: '/uploads/Door-hardware.jpeg',    link: '/products/door-hardware' },
-  { name: 'Entrance Systems', description: 'Seamless automated access',                            image: '/uploads/Automatic-Doors.jpeg',  link: '/products/entrance-systems' },
-  { name: 'Electronic Access',description: 'Eliminate traditional keys with digital credentials',  image: '/uploads/Electronic-Access.jpeg', link: '/products/electronic-access' },
-  { name: 'Smart Home',       description: 'Elevate living experience with automation',            image: '/uploads/Smart-Home.jpeg',       link: '/products/smart-home' },
+  { name: 'Door Hardware',    description: 'Proven solutions for every kind of security needs',   image: '/uploads/site/home/door-hardware.jpeg',    link: '/products/door-hardware' },
+  { name: 'Entrance Systems', description: 'Seamless automated access',                            image: '/uploads/site/home/automatic-doors.jpeg',  link: '/products/entrance-systems' },
+  { name: 'Electronic Access',description: 'Eliminate traditional keys with digital credentials',  image: '/uploads/site/home/electronic-access.jpeg', link: '/products/electronic-access' },
+  { name: 'Smart Home',       description: 'Elevate living experience with automation',            image: '/uploads/site/home/smart-home.jpeg',       link: '/products/smart-home' },
 ];
 
 /* ──────────────────────────────────────────────────────────

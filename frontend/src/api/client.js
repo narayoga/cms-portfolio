@@ -7,6 +7,21 @@ export function mediaUrl(path) {
   return MEDIA + path;
 }
 
+// Images inside article HTML are stored as "/uploads/..." (without a domain), so
+// the content keeps working on any domain. For display, the media domain is added.
+export function htmlForDisplay(html) {
+  if (!html) return '';
+  if (!MEDIA) return html;
+  return html.replace(/(src|href)="\/uploads\//g, `$1="${MEDIA}/uploads/`);
+}
+
+// The opposite of htmlForDisplay: remove the media domain before saving.
+export function htmlForStorage(html) {
+  if (!html) return '';
+  if (!MEDIA) return html;
+  return html.split(`="${MEDIA}/uploads/`).join('="/uploads/');
+}
+
 function getToken() {
   return localStorage.getItem('cms_token') || '';
 }
@@ -44,9 +59,12 @@ export const api = {
   post:   (p, b, o) => request('POST', p, b, o),
   put:    (p, b, o) => request('PUT', p, b, o),
   del:    (p, o) => request('DELETE', p, null, o),
-  upload: async (file, kind = 'image') => {
+  // folder = where the backend stores the file, e.g. 'projects' or 'catalog/items'
+  // (see ALLOWED_UPLOAD_FOLDERS in backend-express/src/lib/upload.ts)
+  upload: async (file, kind = 'image', folder = 'misc') => {
     const fd = new FormData();
     fd.append('file', file);
-    return request('POST', `/admin/upload?kind=${kind}`, fd);
+    const query = new URLSearchParams({ kind, folder });
+    return request('POST', `/admin/upload?${query}`, fd);
   },
 };

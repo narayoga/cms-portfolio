@@ -80,7 +80,7 @@ export default function Subcategories() {
             <label><span>Slug (auto if blank)</span><input value={form.slug || ''} onChange={set('slug')} /></label>
           </div>
           <label><span>Description</span><textarea value={form.description || ''} onChange={set('description')} /></label>
-          <ImageUpload value={form.image_path} onChange={(v) => setForm(f => ({ ...f, image_path: v }))} />
+          <ImageUpload value={form.image_path} onChange={(v) => setForm(f => ({ ...f, image_path: v }))} folder="catalog/subcategories" />
           <div className="form-row">
             <label><span>Sort order</span><input type="number" value={form.sort_order} onChange={set('sort_order')} /></label>
             <label style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>

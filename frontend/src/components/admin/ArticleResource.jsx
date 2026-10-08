@@ -15,8 +15,9 @@ const blank = {
  * Pass `endpoint` (e.g. '/admin/projects') and `label`.
  * `showCategory` adds a category/tag field; `projectFields` adds the project
  * detail spec fields (location, products, owner, architect, contractor).
+ * `uploadFolder` is where the cover image is stored (e.g. 'projects').
  */
-export default function ArticleResource({ endpoint, label, showCategory = false, projectFields = false }) {
+export default function ArticleResource({ endpoint, label, showCategory = false, projectFields = false, uploadFolder = 'misc' }) {
   const [rows, setRows] = useState([]);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(blank);
@@ -101,7 +102,7 @@ export default function ArticleResource({ endpoint, label, showCategory = false,
               <span>Active</span>
             </label>
           </div>
-          <ImageUpload value={form.cover_image} onChange={(v) => setForm(f => ({ ...f, cover_image: v }))} label="Cover image" />
+          <ImageUpload value={form.cover_image} onChange={(v) => setForm(f => ({ ...f, cover_image: v }))} label="Cover image" folder={uploadFolder} />
           <RichTextEditor value={form.content_html} onChange={(v) => setForm(f => ({ ...f, content_html: v }))} label="Content" />
           <div className="actions">
             <button type="submit" className="btn btn-primary" disabled={loading}>{loading ? 'Saving…' : 'Save'}</button>

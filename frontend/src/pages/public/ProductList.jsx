@@ -64,7 +64,7 @@ const NAV = [
 
 // Static Download section — identical across all product pages (not from DB).
 // Swap this path for the real composite product image when available.
-const DOWNLOAD_IMAGE = '/uploads/catalog/10_placeholder.png';
+const DOWNLOAD_IMAGE = '/uploads/catalog/placeholder.png';
 
 function ImgPlaceholder() {
   return (

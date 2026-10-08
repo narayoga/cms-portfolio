@@ -4,25 +4,25 @@
  * Output is HTML stored as-is; sanitized on render via DOMPurify.
  */
 import { useEffect, useRef, useState } from 'react';
-import { api, mediaUrl } from '../../api/client';
+import { api, mediaUrl, htmlForDisplay, htmlForStorage } from '../../api/client';
 
-export default function RichTextEditor({ value = '', onChange, label = 'Content' }) {
+export default function RichTextEditor({ value = '', onChange, label = 'Content', folder = 'content' }) {
   const ref = useRef(null);
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    if (ref.current && ref.current.innerHTML !== value) {
-      ref.current.innerHTML = value || '';
+    if (ref.current && htmlForStorage(ref.current.innerHTML) !== (value || '')) {
+      ref.current.innerHTML = htmlForDisplay(value);
     }
   }, [value]);
 
   const exec = (cmd, val = null) => {
     document.execCommand(cmd, false, val);
-    onChange?.(ref.current.innerHTML);
+    onChange?.(htmlForStorage(ref.current.innerHTML));
     ref.current.focus();
   };
 
-  const handleInput = () => onChange?.(ref.current.innerHTML);
+  const handleInput = () => onChange?.(htmlForStorage(ref.current.innerHTML));
 
   const handleLink = () => {
     const url = prompt('Enter URL:');
@@ -38,7 +38,7 @@ export default function RichTextEditor({ value = '', onChange, label = 'Content'
       if (!f) return;
       setUploading(true);
       try {
-        const r = await api.upload(f, 'image');
+        const r = await api.upload(f, 'image', folder);
         exec('insertImage', mediaUrl(r.path));
       } catch (err) {
         alert('Upload failed: ' + err.message);

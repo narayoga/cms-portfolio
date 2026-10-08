@@ -10,10 +10,17 @@
     },
     {
       "name": "backend",
-      "runtimeExecutable": "php",
-      "runtimeArgs": ["-S", "localhost:8000", "-t", "public", "public/router.php"],
-      "cwd": "D:\\javascript-projects\\82cart\\CMS-portfolio\\backend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "D:\\javascript-projects\\82cart\\CMS-portfolio\\backend-express",
       "port": 8000
+    },
+    {
+      "name": "backend-php-legacy",
+      "runtimeExecutable": "php",
+      "runtimeArgs": ["-S", "localhost:8002", "-t", "public", "public/router.php"],
+      "cwd": "D:\\javascript-projects\\82cart\\CMS-portfolio\\backend",
+      "port": 8002
     }
   ]
 }

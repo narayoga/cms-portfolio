@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { api, mediaUrl } from '../../api/client';
 
-export default function ImageUpload({ value, onChange, kind = 'image', label = 'Image' }) {
+export default function ImageUpload({ value, onChange, kind = 'image', label = 'Image', folder = 'misc' }) {
   const ref = useRef();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -12,7 +12,7 @@ export default function ImageUpload({ value, onChange, kind = 'image', label = '
     setBusy(true);
     setErr('');
     try {
-      const r = await api.upload(f, kind);
+      const r = await api.upload(f, kind, folder);
       onChange?.(r.path);
     } catch (e2) {
       setErr(e2.message);

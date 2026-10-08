@@ -7,9 +7,9 @@ import './Services.css';
 // Mega-menu hash → which tab to activate
 const HASH_TO_TAB = { specifications: 'spec', 'after-sales': 'sales' };
 
-const BANNER = '/uploads/mega-menu-banner.jpg';
-const SPEC_IMAGE = '/uploads/Spesification-and-Consultation.webp';
-const SALES_IMAGE = '/uploads/After-Sales-Service.webp';
+const BANNER = '/uploads/site/mega-menu/mega-menu-banner.jpg';
+const SPEC_IMAGE = '/uploads/site/services/spesification-and-consultation.webp';
+const SALES_IMAGE = '/uploads/site/services/after-sales-service.webp';
 
 function IconTraining() {
   return (

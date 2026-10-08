@@ -63,7 +63,7 @@ export default function Banners() {
 
       <Modal open={open} title={form.id ? 'Edit Banner' : 'New Banner'} onClose={() => setOpen(false)}>
         <form className="admin-form" onSubmit={save}>
-          <ImageUpload value={form.image_path} onChange={(v) => setForm(f => ({ ...f, image_path: v }))} label="Banner image *" />
+          <ImageUpload value={form.image_path} onChange={(v) => setForm(f => ({ ...f, image_path: v }))} label="Banner image *" folder="banners" />
           <div className="form-row">
             <label><span>Title</span><input value={form.title || ''} onChange={set('title')} /></label>
             <label><span>Subtitle</span><input value={form.subtitle || ''} onChange={set('subtitle')} /></label>

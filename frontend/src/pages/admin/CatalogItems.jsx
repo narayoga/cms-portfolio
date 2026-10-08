@@ -167,9 +167,9 @@ export default function CatalogItems() {
           <label><span>Description</span><textarea value={form.description || ''} onChange={set('description')} /></label>
 
           <div className="form-row">
-            <ImageUpload value={form.image_path} onChange={(v) => setForm(f => ({ ...f, image_path: v }))} label="Hero / tile image" />
+            <ImageUpload value={form.image_path} onChange={(v) => setForm(f => ({ ...f, image_path: v }))} label="Hero / tile image" folder="catalog/items" />
             {form.type === 'product' && (
-              <ImageUpload value={form.brand_logo} onChange={(v) => setForm(f => ({ ...f, brand_logo: v }))} label="Brand logo (header)" />
+              <ImageUpload value={form.brand_logo} onChange={(v) => setForm(f => ({ ...f, brand_logo: v }))} label="Brand logo (header)" folder="brands" />
             )}
           </div>
 
@@ -204,7 +204,7 @@ export default function CatalogItems() {
                       </div>
                       {(ft.images || []).map((im, j) => (
                         <div className="feature-img-row" key={j}>
-                          <ImageUpload value={im} onChange={(v) => setFeatImg(i, j, v)} label={`Image ${j + 1}`} />
+                          <ImageUpload value={im} onChange={(v) => setFeatImg(i, j, v)} label={`Image ${j + 1}`} folder="catalog/features" />
                           <div className="feature-img-actions">
                             <button type="button" className="btn btn-outline" onClick={() => moveFeatImg(i, j, -1)} disabled={j === 0}>↑</button>
                             <button type="button" className="btn btn-outline" onClick={() => moveFeatImg(i, j, 1)} disabled={j === (ft.images.length - 1)}>↓</button>
