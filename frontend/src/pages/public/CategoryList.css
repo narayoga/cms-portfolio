@@ -1,0 +1,236 @@
+/* Catalog page (/products) — 3-col hero + 1fr/2fr body sharing one 3-col track */
+
+.catalog-grid3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-6);
+}
+
+/* ---- Hero ---- */
+.catalog-hero {
+  background: var(--color-bg-alt);
+  padding-block: var(--sp-5);
+}
+.catalog-hero-inner {
+  align-items: center;
+}
+.catalog-hero-title {
+  grid-column: 2;
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(2rem, 4vw, 3.25rem);
+  line-height: 1.1;
+  color: var(--color-text);
+}
+.catalog-hero-media {
+  grid-column: 3;
+  justify-self: end;
+  width: 100%;
+  max-width: 320px;        /* smaller cover so the body sits higher */
+  aspect-ratio: 16 / 10;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-bg);
+}
+.catalog-hero-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ---- Body ---- */
+.catalog-body {
+  align-items: start;
+  padding-block: var(--sp-6);
+  /* Keep the body tall enough that sparse categories don't look flattened
+     (and the footer stays pushed down / its color bar visible). */
+  min-height: 620px;
+}
+.catalog-aside {
+  grid-column: 1;
+}
+.catalog-main {
+  grid-column: 2 / 4;
+}
+
+/* ---- Accordion ---- */
+.acc {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.acc-item + .acc-item {
+  border-top: 1px solid var(--color-border);
+}
+.acc-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-4) var(--sp-5);
+  background: var(--color-bg);
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--color-text);
+  transition: background var(--transition);
+}
+.acc-head:hover,
+.acc-item.is-active > .acc-head {
+  background: var(--color-bg-alt);
+}
+/* Plus → minus icon: two bars, the vertical one rotates flat when open */
+.acc-icon {
+  flex: none;
+  position: relative;
+  width: 16px;
+  height: 16px;
+}
+.acc-icon::before,
+.acc-icon::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 13px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--color-text-muted);
+  transform: translate(-50%, -50%);
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+              background var(--transition);
+}
+.acc-icon::after {
+  transform: translate(-50%, -50%) rotate(90deg); /* vertical bar → plus */
+}
+.acc-item.is-open .acc-icon::after {
+  transform: translate(-50%, -50%) rotate(0deg);  /* flattens → minus */
+}
+.acc-item.is-active > .acc-head .acc-icon::before,
+.acc-item.is-active > .acc-head .acc-icon::after {
+  background: var(--color-primary);
+}
+
+/* Expand / collapse: animate the grid row from 0fr → 1fr */
+.acc-panel-wrap {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.acc-item.is-open .acc-panel-wrap {
+  grid-template-rows: 1fr;
+}
+.acc-panel-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+.acc-panel {
+  list-style: none;
+  margin: 0;
+  padding: var(--sp-2) 0 var(--sp-4);
+  background: var(--color-bg);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.acc-item.is-open .acc-panel {
+  opacity: 1;
+}
+.acc-link {
+  display: block;
+  padding: var(--sp-2) var(--sp-5) var(--sp-2) var(--sp-6);
+  color: var(--color-text-muted);
+  text-decoration: none;
+  font-size: .95rem;
+  transition: color var(--transition);
+}
+.acc-link:hover {
+  color: var(--color-primary);
+}
+
+/* ---- Tiles ---- */
+.catalog-tiles {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--sp-5);
+  /* Whole grid fades up as one (partners-style); replays on category
+     change via key={activeSlug} remount */
+  animation: fadeUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.catalog-tile {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+.catalog-tile-img {
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-bg-alt);
+}
+.catalog-tile-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.catalog-tile-title {
+  margin-top: var(--sp-3);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--color-text);
+}
+
+/* shared image placeholder */
+.catalog-ph {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-border);
+  background: var(--color-bg-alt);
+}
+
+/* ---- Reduced motion ---- */
+@media (prefers-reduced-motion: reduce) {
+  .acc-panel-wrap { transition: none; }
+  .acc-panel { opacity: 1; transition: none; }
+  .acc-icon::before, .acc-icon::after { transition: none; }
+  .catalog-tiles { animation: none; }
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 1024px) {
+  .catalog-tiles {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@media (max-width: 768px) {
+  .catalog-grid3 {
+    grid-template-columns: 1fr;
+  }
+  .catalog-hero-spacer {
+    display: none;
+  }
+  .catalog-hero-title,
+  .catalog-hero-media {
+    grid-column: auto;
+  }
+  .catalog-hero-title {
+    text-align: center;
+  }
+  .catalog-main {
+    grid-column: auto;
+  }
+  .catalog-tiles {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

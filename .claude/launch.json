@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "D:\\javascript-projects\\82cart\\CMS-portfolio\\frontend",
+      "port": 5173
+    },
+    {
+      "name": "backend",
+      "runtimeExecutable": "php",
+      "runtimeArgs": ["-S", "localhost:8000", "-t", "public", "public/router.php"],
+      "cwd": "D:\\javascript-projects\\82cart\\CMS-portfolio\\backend",
+      "port": 8000
+    }
+  ]
+}

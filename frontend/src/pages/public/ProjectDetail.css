@@ -1,0 +1,55 @@
+/* ================================================================
+   Project detail — title + location, cover, spec list (left-aligned)
+   ================================================================ */
+
+.pd-page {
+  padding-block: var(--sp-7) var(--sp-9);
+}
+
+.pd-header {
+  margin-bottom: var(--sp-6);
+}
+.pd-title {
+  margin: 0 0 var(--sp-2);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(2rem, 3.5vw, 3rem);
+  line-height: 1.12;
+  color: var(--color-text);
+}
+.pd-location {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--color-text-muted);
+}
+
+.pd-cover {
+  max-width: 1090px;
+  overflow: hidden;
+  margin-bottom: var(--sp-8);
+}
+.pd-cover img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* ── Spec list ── */
+.pd-specs {
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+.pd-spec-label {
+  font-size: 0.95rem;
+  color: var(--color-text-muted);
+  margin-bottom: 2px;
+}
+.pd-spec-value {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--color-text);
+  line-height: 1.4;
+}

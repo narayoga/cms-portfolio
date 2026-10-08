@@ -19,6 +19,7 @@ use App\controllers\AuthController;
 use App\controllers\UserController;
 use App\controllers\CategoryController;
 use App\controllers\SubcategoryController;
+use App\controllers\SubSubcategoryController;
 use App\controllers\ProductController;
 use App\controllers\ProjectController;
 use App\controllers\PublicationController;
@@ -42,6 +43,8 @@ $r->get ('/api/public/homepage',                              [PublicController:
 $r->get ('/api/public/categories',                            [PublicController::class, 'categories']);
 $r->get ('/api/public/categories/:slug',                      [PublicController::class, 'categoryDetail']);
 $r->get ('/api/public/subcategories/:catSlug/:subSlug',       [PublicController::class, 'subcategoryDetail']);
+$r->get ('/api/public/subsubcategories/:catSlug/:subSlug/:subSubSlug', [PublicController::class, 'subSubcategoryDetail']);
+$r->get ('/api/public/subsubcategories/:catSlug/:subSlug/:subSubSlug/:leafSlug', [PublicController::class, 'subSubProductDetail']);
 $r->get ('/api/public/products/:catSlug/:subSlug/:prodSlug',  [PublicController::class, 'productDetail']);
 $r->get ('/api/public/projects',                              [PublicController::class, 'projects']);
 $r->get ('/api/public/projects/:slug',                        [PublicController::class, 'projectDetail']);
@@ -70,6 +73,13 @@ $r->get   ('/api/admin/subcategories',     [SubcategoryController::class, 'index
 $r->post  ('/api/admin/subcategories',     [SubcategoryController::class, 'store']);
 $r->put   ('/api/admin/subcategories/:id', [SubcategoryController::class, 'update']);
 $r->delete('/api/admin/subcategories/:id', [SubcategoryController::class, 'destroy']);
+
+// Admin: sub-subcategories (catalog items: groups + product pages)
+$r->get   ('/api/admin/subsubcategories',     [SubSubcategoryController::class, 'index']);
+$r->get   ('/api/admin/subsubcategories/:id', [SubSubcategoryController::class, 'show']);
+$r->post  ('/api/admin/subsubcategories',     [SubSubcategoryController::class, 'store']);
+$r->put   ('/api/admin/subsubcategories/:id', [SubSubcategoryController::class, 'update']);
+$r->delete('/api/admin/subsubcategories/:id', [SubSubcategoryController::class, 'destroy']);
 
 // Admin: products
 $r->get   ('/api/admin/products',     [ProductController::class, 'index']);

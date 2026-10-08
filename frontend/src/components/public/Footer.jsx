@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { api } from '../../api/client';
+import { gatedGet } from '../../api/cache';
 import './Footer.css';
 
 export default function Footer() {
   const [settings, setSettings] = useState({});
 
   useEffect(() => {
-    api.get('/public/settings').then(setSettings).catch(() => {});
+    gatedGet('/public/settings').then(setSettings).catch(() => {});
   }, []);
 
   const phone    = settings.contact_phone   || '021 5858 660';
@@ -72,8 +72,15 @@ export default function Footer() {
         <div className="footer-col footer-col--center">
           <h4 className="footer-col__title">Visit Our Showroom</h4>
           <div className="footer-showroom">
-            <svg className="footer-showroom__icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z"/></svg>
-            <p className="footer-showroom__label">Location</p>
+            <a
+              href="https://maps.app.goo.gl/EuvfYfXjxUvJBvt18"
+              target="_blank"
+              rel="noreferrer"
+              className="footer-showroom__link"
+            >
+              <svg className="footer-showroom__icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z"/></svg>
+              <p className="footer-showroom__label">Location</p>
+            </a>
             <p className="footer-showroom__sub">Experience how our solutions work in person</p>
           </div>
         </div>

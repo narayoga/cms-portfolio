@@ -1,0 +1,368 @@
+/* ================================================================
+   ProductList — sub-subcategory landing (brand line)
+   /products/:catSlug/:subSlug/:subSubSlug
+   Sticky product header + overview (gallery) + key advantages
+   ================================================================ */
+
+.ssc-page {
+  --ssc-subheader-h: 72px;
+}
+
+/* On the product page the global nav is NOT fixed: it sits in normal flow
+   and scrolls away, letting the product header take over the top. */
+body.pdp-mode .site-header { position: static; }
+body.pdp-mode main { padding-top: 0 !important; }
+
+/* ── Product header (sticks to the very top after the nav scrolls away) ── */
+.ssc-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: #fff9eb;
+  border-bottom: 1px solid rgba(20, 24, 31, 0.06);
+}
+
+.ssc-header-inner {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  align-items: center;
+  gap: var(--sp-5);
+  min-height: var(--ssc-subheader-h);
+  padding-block: var(--sp-3);
+}
+
+.ssc-header-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-1);
+}
+
+.ssc-brand-logo {
+  height: 26px;
+  width: auto;
+  object-fit: contain;
+}
+
+.ssc-header-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--color-secondary);
+}
+
+.ssc-header-nav {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-7);
+}
+
+.ssc-header-nav a {
+  font-size: 0.95rem;
+  font-weight: 500;
+  text-transform: capitalize;
+  color: var(--color-text);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color var(--transition);
+}
+
+.ssc-header-nav a:hover,
+.ssc-header-nav a.is-active {
+  color: var(--color-primary);
+}
+
+/* ── Overview / gallery — fits within one viewport (~100vh) ── */
+.ssc-overview {
+  background: var(--color-bg);
+  min-height: calc(100vh - var(--ssc-subheader-h));
+  display: flex;
+  align-items: center;
+  padding-block: var(--sp-6);
+  scroll-margin-top: var(--ssc-subheader-h);
+}
+
+.ssc-overview > .container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-7);
+}
+
+.ssc-overview-top {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-8);
+  align-items: center;
+}
+
+/* breadcrumb */
+.ssc-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin-bottom: var(--sp-4);
+  flex-wrap: wrap;
+}
+
+.ssc-breadcrumb a {
+  color: var(--color-text-muted);
+  text-decoration: none;
+  transition: color var(--transition);
+}
+
+.ssc-breadcrumb a:hover { color: var(--color-primary); }
+
+.ssc-sep { color: var(--color-border); user-select: none; }
+
+.ssc-title {
+  margin: 0 0 var(--sp-5);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(2rem, 4vw, 3.25rem);
+  line-height: 1.1;
+  color: var(--color-text);
+}
+
+.ssc-desc {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: var(--color-text-muted);
+  max-width: 52ch;
+}
+
+/* hero image — sized by viewport height so the section fits in ~100vh */
+.ssc-overview-media {
+  height: clamp(220px, 40vh, 400px);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: linear-gradient(135deg, #eef2f6, #dfe6ee);
+  box-shadow: var(--shadow-lg);
+}
+
+.ssc-overview-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ssc-media-ph { width: 100%; height: 100%; }
+
+/* ── Key advantages (swipeable, 4 across) ── */
+.ssc-advantages {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  border-top: 1px solid var(--color-border);
+  scrollbar-width: thin;
+}
+
+.ssc-advantage {
+  flex: 0 0 25%;
+  scroll-snap-align: start;
+  box-sizing: border-box;
+  padding: var(--sp-6) var(--sp-5);
+  text-align: center;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #6b5a3e;            /* warm tone to match the reference */
+}
+
+.ssc-advantage + .ssc-advantage {
+  border-left: 1px solid var(--color-border);
+}
+
+/* ── Technical Features ── */
+.ssc-tech {
+  background: var(--color-bg);
+  padding-block: var(--sp-8);
+  scroll-margin-top: var(--ssc-subheader-h);
+}
+
+.ssc-feature {
+  padding-block: var(--sp-8);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.ssc-feature:first-child { padding-top: 0; }
+
+.ssc-feature-title {
+  margin: 0 0 var(--sp-7);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(1.6rem, 3vw, 2.5rem);
+  line-height: 1.15;
+  color: var(--color-text);
+}
+
+.ssc-feature-body {
+  display: grid;
+  grid-template-columns: 1fr 1.6fr;
+  gap: var(--sp-9);
+  align-items: center;
+}
+
+.ssc-feature-media {
+  aspect-ratio: 1 / 1;
+  background: #fff;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: var(--sp-6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ssc-feature-media img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* ── Feature carousel (>1 image) ── */
+.ssc-carousel {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  touch-action: pan-y;
+}
+.ssc-carousel-track {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.ssc-carousel-slide {
+  flex: 0 0 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ssc-carousel-slide img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.ssc-carousel-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: var(--shadow-sm);
+  color: var(--color-text);
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition);
+}
+.ssc-carousel-arrow:hover { background: #fff; }
+.ssc-carousel-prev { left: 6px; }
+.ssc-carousel-next { right: 6px; }
+.ssc-carousel-dots {
+  position: absolute;
+  bottom: 8px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+.ssc-carousel-dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(20, 24, 31, 0.22);
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.ssc-carousel-dot.is-active { background: var(--color-primary); }
+
+.ssc-feature-list {
+  margin: 0;
+  padding-left: var(--sp-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  color: #21456b;                 /* navy spec text, per the reference */
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.ssc-feature-text {
+  margin: 0;
+  color: #21456b;
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+/* ── Download (static section) ── */
+.ssc-download-section {
+  background: var(--color-bg);
+  padding-block: var(--sp-8);
+  border-top: 1px solid var(--color-border);
+  scroll-margin-top: var(--ssc-subheader-h);
+}
+
+.ssc-download-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-5);
+}
+
+.ssc-download-text {
+  margin: 0;
+  color: #21456b;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.ssc-download-btn {
+  display: inline-block;
+  background: #111111;
+  color: #fff;
+  text-decoration: none;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: var(--sp-3) var(--sp-6);
+  border-radius: var(--radius);
+  transition: background var(--transition);
+}
+
+.ssc-download-btn:hover { background: #000; }
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .ssc-feature-body { grid-template-columns: 1fr; gap: var(--sp-6); }
+  .ssc-feature-media { order: -1; aspect-ratio: 4 / 3; }
+  .ssc-header-inner { grid-template-columns: 1fr; gap: var(--sp-2); }
+  .ssc-header-nav { justify-self: start; gap: var(--sp-5); flex-wrap: wrap; }
+  .ssc-overview-top { grid-template-columns: 1fr; }
+  .ssc-overview-media { order: -1; aspect-ratio: 16 / 10; }
+  .ssc-advantage { flex-basis: 70%; }
+}
+
+@media (max-width: 480px) {
+  .ssc-advantage { flex-basis: 85%; }
+}

@@ -1,0 +1,194 @@
+/* ================================================================
+   Services page — 90vh banner + tab bar, then tabbed content
+   ================================================================ */
+
+.svc-hero {
+  height: 100vh;
+  margin-top: calc(-1 * var(--header-h));   /* pull up behind the fixed header */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Offset the hash-scroll target so the fixed header doesn't cover it */
+.svc-page .section {
+  scroll-margin-top: var(--header-h);
+}
+
+/* ── Banner (≈90vh) ── */
+.svc-banner {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+}
+.svc-banner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(15,23,32,.55) 0%, rgba(15,23,32,.25) 55%, rgba(15,23,32,0) 100%);
+}
+.svc-banner-inner {
+  position: relative;
+  width: 100%;                             /* fill flex parent so it left-aligns at the page gutter */
+  padding-top: var(--header-h);            /* clear the overlaid header */
+}
+.svc-banner-title {
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(2rem, 4.2vw, 3.5rem);
+  line-height: 1.12;
+  max-width: 16ch;
+  margin: 0 0 var(--sp-5);
+}
+.svc-banner-sub {
+  color: rgba(255,255,255,.92);
+  font-size: 1.05rem;
+  line-height: 1.6;
+  max-width: 62ch;
+  margin: 0;
+}
+
+/* ── Tab bar (≈10vh) ── */
+.svc-tabs {
+  flex: 0 0 auto;
+  min-height: 10vh;
+  display: flex;
+  align-items: center;
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+}
+.svc-tabs-inner {
+  display: flex;
+  justify-content: flex-start;
+  gap: var(--sp-7);
+  width: 100%;                             /* fill flex parent so tabs sit at the page gutter */
+}
+.svc-tab {
+  background: none;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  padding: var(--sp-3) 0;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color var(--transition), border-color var(--transition);
+}
+.svc-tab:hover { color: var(--color-text); }
+.svc-tab.is-active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+/* ── Panel content ── */
+.svc-h2 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(1.75rem, 3vw, 2.75rem);
+  color: var(--color-text);
+  margin: 0 0 var(--sp-7);
+}
+
+.svc-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-8);
+  align-items: start;
+}
+.svc-text p {
+  margin: 0;
+  color: var(--color-secondary);
+  font-size: 1.02rem;
+  line-height: 1.75;
+}
+.svc-text strong { color: var(--color-text); font-weight: 700; }
+
+.svc-media {
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.svc-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ── Get in touch (spec tab) ── */
+.svc-contact { margin-top: var(--sp-8); }
+.svc-contact-heading {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.15rem;
+  margin: 0 0 var(--sp-4);
+}
+.svc-contact-card {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--sp-5);
+  max-width: 560px;
+}
+.svc-avatar { color: var(--color-secondary); flex-shrink: 0; }
+.svc-contact-name {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  color: var(--color-text);
+}
+.svc-contact-role {
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+  margin-bottom: var(--sp-3);
+}
+.svc-contact-line {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--color-secondary);
+  font-size: 0.95rem;
+  text-decoration: none;
+  margin-top: 2px;
+}
+.svc-contact-line:hover { color: var(--color-primary); }
+.svc-contact-line svg { color: var(--color-text-muted); }
+
+/* ── Feature trio (after-sales tab) ── */
+.svc-features {
+  margin-top: var(--sp-9);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-8);
+}
+.svc-feature-icon { color: var(--color-text); margin-bottom: var(--sp-4); }
+.svc-feature-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--color-text);
+  margin: 0 0 var(--sp-3);
+}
+.svc-feature-text {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+  line-height: 1.65;
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .svc-hero { height: auto; }
+  .svc-banner { min-height: 70vh; padding-block: var(--sp-8); }
+  .svc-tabs { min-height: 0; padding-block: var(--sp-2); }
+  .svc-tabs-inner { gap: var(--sp-5); flex-wrap: wrap; }
+  .svc-two-col { grid-template-columns: 1fr; }
+  .svc-media { order: -1; }
+  .svc-features { grid-template-columns: 1fr; gap: var(--sp-6); }
+}

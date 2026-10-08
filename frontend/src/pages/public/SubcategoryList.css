@@ -1,0 +1,175 @@
+/* ================================================================
+   SubcategoryList — /products/:catSlug
+   Layout: full-width hero (text left / image right) + product grid
+   ================================================================ */
+
+/* ── Hero ── */
+.subcat-hero {
+  background: var(--color-bg-alt);
+  /* Match the hero → "Featured Products" gap (section title margin, 48px) */
+  padding-block: var(--sp-7);
+}
+
+.subcat-hero-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sp-8);
+  max-width: 1200px;   /* caps how far the text and image spread apart */
+}
+
+/* breadcrumb inside hero */
+.subcat-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin-bottom: var(--sp-3);
+  flex-wrap: wrap;
+}
+
+.subcat-breadcrumb a {
+  color: var(--color-text-muted);
+  text-decoration: none;
+  transition: color var(--transition);
+}
+
+.subcat-breadcrumb a:hover {
+  color: var(--color-primary);
+}
+
+.subcat-sep {
+  color: var(--color-border);
+  user-select: none;
+}
+
+/* title */
+.subcat-hero-title {
+  margin: 0 0 var(--sp-3);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(2rem, 4vw, 3.25rem);
+  line-height: 1.1;
+  color: var(--color-text);
+}
+
+/* subtitle — matches the breadcrumb style, spans full width */
+.subcat-hero-subtitle {
+  margin: 0 0 var(--sp-3);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--color-text-muted);
+  max-width: none;
+}
+
+/* description */
+.subcat-hero-desc {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+  max-width: 55ch;
+}
+
+/* hero image */
+.subcat-hero-media {
+  width: clamp(200px, 24vw, 300px);
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--color-bg);
+}
+
+.subcat-hero-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ── Featured Product section ──
+   Vertical spacing comes from the section title margin (top) and the grid
+   margin-bottom (bottom); no section padding needed. */
+
+.subcat-section-title {
+  margin: var(--sp-7) 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(1.5rem, 2.5vw, 2rem);
+  color: var(--color-text);
+}
+
+/* ── Tiles grid ── */
+.subcat-grid {
+  display: grid;
+  /* Columns sized to the tile so items pack from the start with a tidy,
+     consistent gap (instead of 1fr spreading them far apart). */
+  grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 250px));
+  justify-content: start;
+  gap: var(--sp-5);
+  margin-bottom: var(--sp-8);
+}
+
+.subcat-tile {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+
+.subcat-tile-img {
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-bg-alt);
+}
+
+.subcat-tile-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.subcat-tile:hover .subcat-tile-img img {
+  transform: scale(1.05);
+}
+
+.subcat-tile-name {
+  margin-top: var(--sp-3);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--color-text);
+  text-align: center;
+}
+
+/* ── Image placeholder ── */
+.subcat-ph {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-border);
+  background: var(--color-bg-alt);
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .subcat-hero-inner {
+    grid-template-columns: 1fr;
+  }
+
+  .subcat-hero-media {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    order: -1; /* gambar di atas teks pada mobile */
+  }
+}
+
+@media (max-width: 480px) {
+  .subcat-grid {
+    gap: var(--sp-4);
+  }
+}

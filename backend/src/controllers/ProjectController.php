@@ -23,9 +23,15 @@ class ProjectController
         Validator::require($b, ['title']);
         $slug = Validator::uniqueSlug('projects', Validator::slug($b['slug'] ?? $b['title']));
         $id = Db::insert(
-            'INSERT INTO projects (title, slug, cover_image, content_html, published_at, is_active) VALUES (?, ?, ?, ?, ?, ?)',
+            'INSERT INTO projects (title, category, location, products, owner, architect, contractor, slug, cover_image, content_html, published_at, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
                 $b['title'],
+                $b['category'] ?? null,
+                $b['location'] ?? null,
+                $b['products'] ?? null,
+                $b['owner'] ?? null,
+                $b['architect'] ?? null,
+                $b['contractor'] ?? null,
                 $slug,
                 $b['cover_image'] ?? null,
                 $b['content_html'] ?? null,
@@ -44,10 +50,17 @@ class ProjectController
         $row = Db::one('SELECT * FROM projects WHERE id = ?', [$id]);
         if (!$row) Response::error('Not found', 404);
         $slug = isset($b['slug']) ? Validator::uniqueSlug('projects', Validator::slug($b['slug']), $id) : $row['slug'];
+        $keep = fn($k) => array_key_exists($k, $b) ? $b[$k] : $row[$k];
         Db::exec(
-            'UPDATE projects SET title = ?, slug = ?, cover_image = ?, content_html = ?, published_at = ?, is_active = ? WHERE id = ?',
+            'UPDATE projects SET title = ?, category = ?, location = ?, products = ?, owner = ?, architect = ?, contractor = ?, slug = ?, cover_image = ?, content_html = ?, published_at = ?, is_active = ? WHERE id = ?',
             [
                 $b['title'] ?? $row['title'],
+                $keep('category'),
+                $keep('location'),
+                $keep('products'),
+                $keep('owner'),
+                $keep('architect'),
+                $keep('contractor'),
                 $slug,
                 $b['cover_image'] ?? $row['cover_image'],
                 $b['content_html'] ?? $row['content_html'],

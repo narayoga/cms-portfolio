@@ -5,13 +5,18 @@ import ImageUpload from './ImageUpload.jsx';
 import RichTextEditor from './RichTextEditor.jsx';
 
 const today = () => new Date().toISOString().slice(0, 10);
-const blank = { title: '', slug: '', cover_image: '', content_html: '', published_at: today(), is_active: 1 };
+const blank = {
+  title: '', category: '', location: '', products: '', owner: '', architect: '', contractor: '',
+  slug: '', cover_image: '', content_html: '', published_at: today(), is_active: 1,
+};
 
 /**
  * Reusable CRUD page for Project / Publication (same schema).
  * Pass `endpoint` (e.g. '/admin/projects') and `label`.
+ * `showCategory` adds a category/tag field; `projectFields` adds the project
+ * detail spec fields (location, products, owner, architect, contractor).
  */
-export default function ArticleResource({ endpoint, label }) {
+export default function ArticleResource({ endpoint, label, showCategory = false, projectFields = false }) {
   const [rows, setRows] = useState([]);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(blank);
@@ -73,6 +78,22 @@ export default function ArticleResource({ endpoint, label }) {
             <label><span>Title *</span><input required value={form.title} onChange={set('title')} /></label>
             <label><span>Slug (auto if blank)</span><input value={form.slug || ''} onChange={set('slug')} /></label>
           </div>
+          {showCategory && (
+            <label><span>Category / Tag</span><input value={form.category || ''} onChange={set('category')} placeholder="e.g. Governmental Building" /></label>
+          )}
+          {projectFields && (
+            <>
+              <div className="form-row">
+                <label><span>Location</span><input value={form.location || ''} onChange={set('location')} placeholder="e.g. Nusantara, Indonesia" /></label>
+                <label><span>Products</span><input value={form.products || ''} onChange={set('products')} placeholder="e.g. WILKA" /></label>
+              </div>
+              <label><span>Owner</span><input value={form.owner || ''} onChange={set('owner')} /></label>
+              <div className="form-row">
+                <label><span>Architect Consultant</span><input value={form.architect || ''} onChange={set('architect')} /></label>
+                <label><span>Main Contractor</span><input value={form.contractor || ''} onChange={set('contractor')} /></label>
+              </div>
+            </>
+          )}
           <div className="form-row">
             <label><span>Published date</span><input type="date" value={form.published_at || ''} onChange={set('published_at')} /></label>
             <label style={{ flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'end', height: 42 }}>

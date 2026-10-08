@@ -8,5 +8,6 @@ build/
 .DS_Store
 backend/public/uploads/*
 !backend/public/uploads/.gitkeep
+backend/uploads-backup-original/
 .vscode/
 .idea/

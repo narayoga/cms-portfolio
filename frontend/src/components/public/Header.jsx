@@ -1,17 +1,40 @@
 import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
-import { api, mediaUrl } from '../../api/client';
+import { mediaUrl } from '../../api/client';
+import { cachedGet, gatedGet } from '../../api/cache';
+import SmoothImg from './SmoothImg.jsx';
 import './Header.css';
 
 const LOGO_PATH = '/uploads/15_SAG-warna-ri4cltobofltnbnvjndxax4uuic9o83fh7mq7ac1wy.png';
 
 const MEGA_KEYS = ['products', 'services', 'download center'];
 
-// Static left-panel content per mega key. `items` for products is filled from DB.
+// Static left-panel content per mega key. `items` for products is filled from DB;
+// services/download use the static `items` defined here.
 const MEGA_META = {
-  products: { title: 'Solutions', subtitle: 'Solutions For Your Area Of Use', cta: 'Explore Products', ctaUrl: '/products' },
-  services: { title: 'Services', subtitle: 'Support For Every Stage', cta: 'Explore Services', ctaUrl: '/services' },
-  'download center': { title: 'Downloads', subtitle: 'Resources & Documentation', cta: 'Browse Downloads', ctaUrl: '/download-center' },
+  products: {
+    title: 'Solutions', subtitle: 'Solutions For Your Area Of Use',
+    cta: 'Explore Products', ctaUrl: '/products',
+    image: '/uploads/mega-menu-products.webp',
+  },
+  services: {
+    title: 'Solutions', subtitle: 'Professional Door Hardware Care',
+    cta: 'Explore Service', ctaUrl: '/services',
+    image: '/uploads/mega-menu-banner.jpg',
+    items: [
+      { label: 'Specifications', url: '/services#specifications' },
+      { label: 'After Sales', url: '/services#after-sales' },
+    ],
+  },
+  'download center': {
+    title: 'Solutions', subtitle: 'All Resources In One Place',
+    cta: 'Explore Download Center', ctaUrl: '/download-center',
+    image: '/uploads/mega-menu-download.webp',
+    items: [
+      { label: 'Product Catalogues', url: '/download-center#catalogues' },
+      { label: 'Product Manuals', url: '/download-center#manuals' },
+    ],
+  },
 };
 
 function ChevronDown() {
@@ -32,12 +55,16 @@ function ChevronRight() {
 
 function MegaMenu({ meta, items, onNavigate }) {
   const [activeIdx, setActiveIdx] = useState(null);
+  const hasChildren = (it) => Array.isArray(it.children) && it.children.length > 0;
   const active = activeIdx !== null ? items[activeIdx] : null;
 
   return (
     <div className="mega-inner">
       <div className="mega-left">
-        <div className="mega-image" />
+        <div
+          className="mega-image"
+          style={meta.image ? { backgroundImage: `url(${mediaUrl(meta.image)})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+        />
         <h3 className="mega-title">{meta.title}</h3>
         <p className="mega-subtitle">{meta.subtitle}</p>
         <Link className="mega-cta" to={meta.ctaUrl} onClick={onNavigate}>{meta.cta}</Link>
@@ -47,20 +74,27 @@ function MegaMenu({ meta, items, onNavigate }) {
         <ul className="mega-col mega-col-primary">
           {items.map((it, i) => (
             <li key={it.label}>
-              <button
-                type="button"
-                className={`mega-item ${i === activeIdx ? 'active' : ''}`}
-                onClick={() => setActiveIdx(i === activeIdx ? null : i)}
-              >
-                <span>{it.label}</span>
-                <ChevronRight />
-              </button>
+              {hasChildren(it) ? (
+                <button
+                  type="button"
+                  className={`mega-item ${i === activeIdx ? 'active' : ''}`}
+                  onClick={() => setActiveIdx(i === activeIdx ? null : i)}
+                >
+                  <span>{it.label}</span>
+                  <ChevronRight />
+                </button>
+              ) : (
+                <Link className="mega-item" to={it.url} onClick={onNavigate}>
+                  <span>{it.label}</span>
+                  <ChevronRight />
+                </Link>
+              )}
             </li>
           ))}
         </ul>
 
         <ul className="mega-col mega-col-secondary" key={activeIdx ?? 'empty'}>
-          {active && active.children.map((c) => (
+          {active && hasChildren(active) && active.children.map((c) => (
             <li key={c.url || c.label}>
               <Link className="mega-subitem" to={c.url} onClick={onNavigate}>{c.label}</Link>
             </li>
@@ -82,7 +116,9 @@ export default function Header() {
   const navigate = useNavigate();
   const closeTimer = useRef(null);
 
-  const isHero = location.pathname === '/' && !scrolled && !openMega;
+  const isHero = ['/', '/services'].includes(location.pathname) && !scrolled && !openMega;
+  // Transparent header but with dark text (for light banners, e.g. Download Center)
+  const isHeroLight = location.pathname === '/download-center' && !scrolled && !openMega;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
@@ -97,15 +133,15 @@ export default function Header() {
   }, [location.pathname]);
 
   useEffect(() => {
-    api.get('/public/settings')
+    gatedGet('/public/settings')
       .then(s => { if (s?.site_name) setSiteName(s.site_name); })
       .catch(() => {});
 
-    api.get('/public/nav-menus')
+    gatedGet('/public/nav-menus')
       .then(menus => { if (menus?.header) setNavLinks(menus.header); })
       .catch(() => {});
 
-    api.get('/public/categories')
+    cachedGet('/public/categories')
       .then(cats => {
         if (Array.isArray(cats)) {
           setProductItems(cats.map(c => ({
@@ -129,11 +165,12 @@ export default function Header() {
   const closeAll = () => { setOpen(false); setOpenMega(null); };
 
   const megaKeyFor = (label) => {
-    const k = label?.trim().toLowerCase();
+    let k = label?.trim().toLowerCase();
+    if (k === 'service') k = 'services';
     return MEGA_KEYS.includes(k) ? k : null;
   };
 
-  const itemsFor = (key) => (key === 'products' ? productItems : []);
+  const itemsFor = (key) => (key === 'products' ? productItems : (MEGA_META[key]?.items || []));
 
   const handleAnchor = (e, url) => {
     e.preventDefault();
@@ -149,13 +186,13 @@ export default function Header() {
 
   return (
     <header
-      className={`site-header ${isHero ? 'is-hero' : ''} ${scrolled ? 'is-scrolled' : ''} ${openMega ? 'has-mega-open' : ''}`}
+      className={`site-header ${isHero ? 'is-hero' : ''} ${isHeroLight ? 'is-hero-light' : ''} ${scrolled ? 'is-scrolled' : ''} ${openMega ? 'has-mega-open' : ''}`}
       onMouseLeave={scheduleClose}
     >
       <div className="header-inner">
         <div className="header-col header-left">
           <Link to="/" className="logo" onClick={() => setOpen(false)}>
-            <img src={mediaUrl(LOGO_PATH)} alt={siteName || 'Logo'} />
+            <SmoothImg src={mediaUrl(LOGO_PATH)} alt={siteName || 'Logo'} plain fetchpriority="high" decoding="async" />
           </Link>
         </div>
 

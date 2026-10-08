@@ -150,6 +150,120 @@
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ── Loading UX: gated reveal + top progress bar ─────────────────── */
+
+/* The public shell is hidden until the first load's data is ready, then the
+   whole thing (header, content, footer) fades in together — no layout shift. */
+.public-shell { opacity: 0; }
+.public-shell.is-ready { opacity: 1; transition: opacity .35s ease; }
+
+/* Each route's content fades up on mount. */
+.route-fade { animation: routeFade .35s ease both; }
+@keyframes routeFade {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Full-screen frosted-glass loader (initial page load only). */
+.page-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(20px) saturate(120%);
+  -webkit-backdrop-filter: blur(20px) saturate(120%);
+  animation: pageLoaderIn .25s ease both;
+}
+/* On completion the whole overlay lifts off, revealing the page beneath. */
+.page-loader.is-exiting {
+  animation: pageLoaderOut .55s cubic-bezier(.4, 0, .2, 1) both;
+  pointer-events: none;
+}
+@keyframes pageLoaderIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes pageLoaderOut {
+  from { opacity: 1; transform: scale(1); }
+  to   { opacity: 0; transform: scale(1.08); }
+}
+
+/* Five monochrome bars, pulsing in sequence. */
+.page-loader__bars {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+}
+.page-loader__bars span {
+  display: block;
+  width: 5px;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--color-text);
+  animation: barPulse 1s ease-in-out infinite;
+}
+.page-loader__bars span:nth-child(2) { animation-delay: .12s; }
+.page-loader__bars span:nth-child(3) { animation-delay: .24s; }
+.page-loader__bars span:nth-child(4) { animation-delay: .36s; }
+.page-loader__bars span:nth-child(5) { animation-delay: .48s; }
+@keyframes barPulse {
+  0%, 100% { transform: scaleY(.35); opacity: .35; }
+  50%      { transform: scaleY(1);   opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .public-shell.is-ready { transition: none; }
+  .route-fade { animation: none; }
+  .page-loader__bars span { animation: none; opacity: .6; }
+  .page-loader.is-exiting { animation: pageLoaderFade .3s ease both; }
+  @keyframes pageLoaderFade { from { opacity: 1; } to { opacity: 0; } }
+}
+
+/* ── SmoothImg: shimmer placeholder + fade-in, no alt-text leak ───── */
+.smooth-img {
+  color: transparent;                 /* hide alt text while loading/broken */
+  background-color: var(--color-bg-alt, #eceef1);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.55) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: smoothImgShimmer 1.3s ease-in-out infinite;
+}
+.smooth-img.is-loaded {
+  background: none;
+  animation: smoothImgFade 0.35s ease both;
+}
+.smooth-img.is-error {
+  background-image: none;
+  animation: none;
+}
+/* Plain variant: no grey placeholder box (for transparent logos), but still
+   hides alt text and fades in. */
+.smooth-img--plain {
+  background: none;
+  animation: none;
+}
+@keyframes smoothImgShimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@keyframes smoothImgFade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .smooth-img { animation: none; }
+  .smooth-img.is-loaded { animation: none; }
+}
+
 .rich-content { line-height: 1.7; }
 .rich-content h1, .rich-content h2, .rich-content h3 { margin-top: 1.5em; margin-bottom: .5em; }
 .rich-content p { margin-bottom: 1em; }

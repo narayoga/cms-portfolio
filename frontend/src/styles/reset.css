@@ -2,6 +2,11 @@
 *, *::before, *::after { box-sizing: border-box; }
 * { margin: 0; padding: 0; }
 html, body { height: 100%; }
+/* Reserve the scrollbar gutter so the fixed header and the scrolled body
+   share the same content width (keeps their left/right padding aligned). */
+html { scrollbar-gutter: stable; }
+/* Smooth scrolling is handled by Lenis (see App.jsx). Keep scroll-behavior
+   at the browser default (auto) so it doesn't fight Lenis's own scrolling. */
 body { line-height: 1.5; -webkit-font-smoothing: antialiased; }
 img, picture, video, canvas, svg { display: block; max-width: 100%; }
 input, button, textarea, select { font: inherit; color: inherit; }

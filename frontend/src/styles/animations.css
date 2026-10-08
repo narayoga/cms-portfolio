@@ -1,0 +1,77 @@
+/* ================================================================
+   animations.css — central animation library
+   ----------------------------------------------------------------
+   HOW TO USE (scroll reveal)
+   1. Add class:  reveal  +  a variant, e.g.  reveal reveal--fade-up
+   2. The animation plays when the element (or an ancestor) gains the
+      class  is-visible  — toggle that with an IntersectionObserver
+      (see the useReveal hook / Home.jsx for an example).
+   3. Stagger children by setting  --reveal-delay  inline:
+        style={{ '--reveal-delay': `${i * 120}ms` }}
+
+   Tune per element with these custom properties (all optional):
+        --reveal-duration   (default .7s)
+        --reveal-ease       (default ease-out curve)
+        --reveal-delay      (default 0ms)
+
+   You can also use the @keyframes directly on anything:
+        .my-thing { animation: fadeUp .6s both; }
+   ================================================================ */
+
+/* ── Keyframes ─────────────────────────────────────────────────── */
+@keyframes fadeIn      { from { opacity: 0; }                                   to { opacity: 1; } }
+
+@keyframes fadeUp      { from { opacity: 0; transform: translateY(48px); }      to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeDown    { from { opacity: 0; transform: translateY(-48px); }     to { opacity: 1; transform: translateY(0); } }
+
+@keyframes slideUp     { from { transform: translateY(100%); }                  to { transform: translateY(0); } }
+@keyframes slideDown   { from { transform: translateY(-100%); }                 to { transform: translateY(0); } }
+
+/* Full-width horizontal slides, no fade (used for the project marquee rows) */
+@keyframes slideFromRight { from { transform: translateX(100%); }  to { transform: translateX(0); } }
+@keyframes slideFromLeft  { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+
+@keyframes slideInLeft { from { opacity: 0; transform: translateX(-48px); }     to { opacity: 1; transform: translateX(0); } }
+@keyframes slideInRight{ from { opacity: 0; transform: translateX(48px); }      to { opacity: 1; transform: translateX(0); } }
+
+@keyframes scaleIn     { from { opacity: 0; transform: scale(0.9); }            to { opacity: 1; transform: scale(1); } }
+@keyframes zoomIn      { from { opacity: 0; transform: scale(1.08); }           to { opacity: 1; transform: scale(1); } }
+
+@keyframes blurIn      { from { opacity: 0; filter: blur(12px); }               to { opacity: 1; filter: blur(0); } }
+
+/* ── Scroll-reveal utility ─────────────────────────────────────── */
+/* Hidden resting state — applied as soon as .reveal is on the element */
+.reveal {
+  opacity: 0;
+}
+
+/* Shared timing; fires when the element OR an ancestor has .is-visible */
+.reveal.is-visible,
+.is-visible .reveal {
+  animation-duration: var(--reveal-duration, 0.7s);
+  animation-timing-function: var(--reveal-ease, cubic-bezier(0.22, 1, 0.36, 1));
+  animation-fill-mode: both;
+  animation-delay: var(--reveal-delay, 0ms);
+}
+
+/* Variant → which keyframe to run */
+.reveal--fade-in.is-visible,    .is-visible .reveal--fade-in    { animation-name: fadeIn; }
+.reveal--fade-up.is-visible,    .is-visible .reveal--fade-up    { animation-name: fadeUp; }
+.reveal--fade-down.is-visible,  .is-visible .reveal--fade-down  { animation-name: fadeDown; }
+.reveal--slide-left.is-visible, .is-visible .reveal--slide-left { animation-name: slideInLeft; }
+.reveal--slide-right.is-visible,.is-visible .reveal--slide-right{ animation-name: slideInRight; }
+.reveal--scale-in.is-visible,   .is-visible .reveal--scale-in   { animation-name: scaleIn; }
+.reveal--zoom-in.is-visible,    .is-visible .reveal--zoom-in    { animation-name: zoomIn; }
+.reveal--blur-in.is-visible,    .is-visible .reveal--blur-in    { animation-name: blurIn; }
+
+/* Accessibility: no motion, just show everything */
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .reveal.is-visible,
+  .is-visible .reveal {
+    opacity: 1 !important;
+    filter: none !important;
+    animation: none !important;
+    transform: none !important;
+  }
+}

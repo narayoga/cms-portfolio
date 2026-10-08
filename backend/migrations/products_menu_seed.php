@@ -3,7 +3,9 @@ declare(strict_types=1);
 
 /**
  * Products mega-menu seed — categories (level-1) + subcategories (level-2).
- * Safe to run multiple times (idempotent: UPSERT on category name, INSERT IGNORE on subcategory slug).
+ * Safe to run multiple times (idempotent).
+ *   - Looks up categories by NAME (stable), then corrects slug + name.
+ *   - UPSERTs subcategories by (category_id, slug).
  *
  * Run AFTER migrate.php (creates categories/subcategories tables).
  *
@@ -25,9 +27,9 @@ function slugify(string $s): string
     return trim($s, '-');
 }
 
-// slug => [display name, [subcategories...]]
+// Correct slug => [display name, [subcategories in order...]]
 $tree = [
-    'door-locks' => [
+    'door-hardware' => [
         'name' => 'Door Hardware',
         'subs' => [
             'Mechanical Locksets',
@@ -38,26 +40,27 @@ $tree = [
             'Floor Hinges',
             'Decorative Locksets',
             'Door Seals',
+            'Hinges',
             'Knobsets and Leversets',
             'Shower Glass Door Hardware',
             'Sliding and Folding Door Hardware',
         ],
     ],
-    'access-control' => [
+    'entrance-systems' => [
         'name' => 'Entrance Systems',
         'subs' => [
             'Automatic Swing Door Operators',
             'Automatic Sliding Door Operators',
         ],
     ],
-    'digital-locks' => [
+    'electronic-access' => [
         'name' => 'Electronic Access',
         'subs' => [
             'Wall Reader',
             'Electronic Locks',
         ],
     ],
-    'smart-home-security' => [
+    'smart-home' => [
         'name' => 'Smart Home',
         'subs' => [
             'Smart Devices',
@@ -67,19 +70,23 @@ $tree = [
 ];
 
 foreach ($tree as $catSlug => $data) {
-    $cat = Db::one('SELECT id, name FROM categories WHERE slug = ?', [$catSlug]);
+    // Look up by name (stable across slug changes); fall back to any prior slug
+    $cat = Db::one('SELECT id, slug FROM categories WHERE name = ?', [$data['name']]);
     if (!$cat) {
-        echo "  ⚠ Category '$catSlug' not found — skipped (run content_seed.php first)\n";
+        echo "  ⚠ Category '{$data['name']}' not found — skipped (run content_seed.php first)\n";
         continue;
     }
 
-    // Ensure display name is correct
-    if ($cat['name'] !== $data['name']) {
+    // Always ensure name AND slug are correct
+    if ($cat['slug'] !== $catSlug) {
+        Db::exec('UPDATE categories SET name = ?, slug = ? WHERE id = ?', [$data['name'], $catSlug, $cat['id']]);
+        echo "  ↻ Fixed category slug '{$cat['slug']}' → '{$catSlug}'\n";
+    } else {
         Db::exec('UPDATE categories SET name = ? WHERE id = ?', [$data['name'], $cat['id']]);
-        echo "  ↻ Renamed category '{$cat['name']}' → '{$data['name']}'\n";
     }
 
-    echo "  • {$data['name']}\n";
+    echo "  • {$data['name']} (/{$catSlug})\n";
+
     foreach ($data['subs'] as $i => $subName) {
         $subSlug = slugify($subName);
         $existing = Db::one(

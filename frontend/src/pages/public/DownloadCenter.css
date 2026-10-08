@@ -1,0 +1,94 @@
+/* ================================================================
+   Download Center — banner (same style as Services, shorter, no tabs)
+   ================================================================ */
+
+.dl-hero {
+  height: 100vh;
+  min-height: 600px;
+  margin-top: calc(-1 * var(--header-h));   /* pull up behind the fixed header */
+  position: relative;
+  background-color: #fff;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+}
+.dl-hero-inner {
+  position: relative;
+  width: 100%;                              /* fill so it left-aligns at the page gutter */
+  padding-top: var(--header-h);             /* clear the fixed header */
+}
+.dl-hero-title {
+  color: var(--color-text);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(2rem, 4.2vw, 3.5rem);
+  line-height: 1.12;
+  margin: 0;
+  max-width: 16ch;              /* wrap onto two lines */
+}
+.dl-hero-sub {
+  color: var(--color-secondary);
+  font-size: 1.05rem;
+  line-height: 1.6;
+  max-width: 62ch;
+  margin: 0;
+}
+
+/* ── Sections ── */
+.dl-section { margin-bottom: var(--sp-9); scroll-margin-top: var(--header-h); }
+.dl-section:last-child { margin-bottom: 0; }
+.dl-section-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(1.6rem, 2.6vw, 2.25rem);
+  color: var(--color-text);
+  margin: 0 0 var(--sp-7);
+}
+
+.dl-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--sp-7) var(--sp-6);
+}
+
+.dl-card { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.dl-card-cover {
+  width: 100%;
+  background: #fff;
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+.dl-card-cover img { width: 100%; height: auto; display: block; }
+.dl-card-ph { width: 100%; aspect-ratio: 3 / 4; background: var(--color-bg-alt); }
+
+/* Square covers (e.g. Fidelio) forced into the portrait shape of their
+   section-mates, cropped from the left/bottom to keep the title text. */
+.dl-card-cover.is-crop-lb { aspect-ratio: 1241 / 1754; }
+.dl-card-cover.is-crop-lb img { height: 100%; object-fit: cover; object-position: left bottom; }
+
+.dl-card-title {
+  margin-top: var(--sp-4);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--color-text);
+}
+.dl-card-download {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: color var(--transition);
+}
+.dl-card-download:hover { color: var(--color-primary); }
+
+/* ── Responsive ── */
+@media (max-width: 1024px) { .dl-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 700px)  { .dl-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 900px) {
+  .dl-hero { height: auto; min-height: 56vh; padding-block: var(--sp-8); }
+}

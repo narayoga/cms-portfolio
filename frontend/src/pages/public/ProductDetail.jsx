@@ -9,7 +9,7 @@ export default function ProductDetail() {
   const { catSlug, subSlug, prodSlug } = useParams();
   const { data, loading } = useFetch(`/public/products/${catSlug}/${subSlug}/${prodSlug}`, [catSlug, subSlug, prodSlug]);
   const [activeImg, setActiveImg] = useState(0);
-  if (loading) return <div className="spinner" />;
+  if (loading) return null;
   if (!data) return <div className="empty">Product not found.</div>;
 
   const images = [data.cover_image, ...(data.images?.map(i => i.image_path) || [])].filter(Boolean);
@@ -28,7 +28,7 @@ export default function ProductDetail() {
         <div className="container product-detail">
           <div>
             <div className="prod-hero">
-              {heroImg ? <img src={mediaUrl(heroImg)} alt={data.name} /> : <div style={{ height:'100%', background:'var(--color-bg-alt)'}} />}
+              {heroImg ? <img src={mediaUrl(heroImg)} alt={data.name} fetchpriority="high" decoding="async" /> : <div style={{ height:'100%', background:'var(--color-bg-alt)'}} />}
             </div>
             {images.length > 1 && (
               <div className="prod-thumbs">
@@ -38,7 +38,7 @@ export default function ProductDetail() {
                     className={`prod-thumb ${i === activeImg ? 'is-active' : ''}`}
                     onClick={() => setActiveImg(i)}
                   >
-                    <img src={mediaUrl(img)} alt="" />
+                    <img src={mediaUrl(img)} alt="" loading="lazy" decoding="async" />
                   </button>
                 ))}
               </div>

@@ -1,6 +1,8 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useFetch } from '../../hooks/useFetch';
+import { useReveal } from '../../hooks/useReveal';
 import HeroSlider from '../../components/public/HeroSlider.jsx';
+import SmoothImg from '../../components/public/SmoothImg.jsx';
 import { useEffect, useState } from 'react';
 import './Home.css';
 
@@ -51,6 +53,16 @@ function MarqueeStrip({ children, speed = 40, reverse = false }) {
   );
 }
 
+/* Home category cards are fully static — no DB. Each is just a background
+   image + description linking to its product page. Images live in
+   backend/public/uploads. Edit this list to change the homepage lineup. */
+const HOME_CATEGORIES = [
+  { name: 'Door Hardware',    description: 'Proven solutions for every kind of security needs',   image: '/uploads/Door-hardware.jpeg',    link: '/products/door-hardware' },
+  { name: 'Entrance Systems', description: 'Seamless automated access',                            image: '/uploads/Automatic-Doors.jpeg',  link: '/products/entrance-systems' },
+  { name: 'Electronic Access',description: 'Eliminate traditional keys with digital credentials',  image: '/uploads/Electronic-Access.jpeg', link: '/products/electronic-access' },
+  { name: 'Smart Home',       description: 'Elevate living experience with automation',            image: '/uploads/Smart-Home.jpeg',       link: '/products/smart-home' },
+];
+
 /* ──────────────────────────────────────────────────────────
    Home
    ────────────────────────────────────────────────────────── */
@@ -58,6 +70,12 @@ export default function Home() {
   const { data, loading } = useFetch('/public/homepage', []);
   const [activeStory, setActiveStory] = useState(0);
   const location = useLocation();
+
+  // Scroll-into-view triggers for the animation library (see animations.css)
+  const [catsRef,     catsVisible]     = useReveal();
+  const [servicesRef, servicesVisible] = useReveal();
+  const [marqueeRef,  marqueeVisible]  = useReveal();
+  const [partnersRef, partnersVisible] = useReveal();
 
   // Scroll to hash target (e.g. #about) once content is rendered
   useEffect(() => {
@@ -68,10 +86,9 @@ export default function Home() {
     });
   }, [loading, location.hash]);
 
-  if (loading) return <div className="spinner" />;
+  if (loading) return null;
 
   const banners          = data?.banners            || [];
-  const categories       = data?.featuredCategories || [];
   const marqueeProjects  = data?.marqueeProjects     || [];
   const storyMilestones  = data?.storyMilestones     || [];
   const partnerBrands    = data?.partnerBrands       || [];
@@ -85,60 +102,63 @@ export default function Home() {
       {/* ── 1. HERO SLIDER ─────────────────────────────── */}
       <HeroSlider banners={banners} />
 
-      {/* ── 2. CATEGORY BANNER CARDS ───────────────────── */}
-      {categories.length > 0 && (
-        <section className="home-cats-section">
-          <div className="container home-cats-section__header">
-            <h2 className="home-cats-section__title">Explore our lineup of innovative and tailored products</h2>
-            <p className="home-cats-section__sub">All products are not created equally – we strive to provide the finest solutions in each of our product cluster</p>
-          </div>
-          <div className="home-cats">
-            {categories.map(cat => (
-              <Link
-                key={cat.id}
-                to={`/products/${cat.slug}`}
-                className="home-cat-card"
-              >
-                {cat.image_path
-                  ? <img src={`${import.meta.env.VITE_MEDIA_URL}${cat.image_path}`} alt={cat.name} />
-                  : <div className="home-cat-card__placeholder" />
-                }
-                <div className="home-cat-card__top-info">
-                  <p className="home-cat-card__hover">{cat.description}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
+      {/* ── 2. CATEGORY BANNER CARDS (static) ──────────── */}
+      <section className="home-cats-section">
+        <div className="container home-cats-section__header">
+          <h2 className="home-cats-section__title">Explore our lineup of innovative and tailored products</h2>
+          <p className="home-cats-section__sub">All products are not created equally – we strive to provide the finest solutions in each of our product cluster</p>
+        </div>
+        <div className={`home-cats ${catsVisible ? 'is-visible' : ''}`} ref={catsRef}>
+          {HOME_CATEGORIES.map((cat, i) => (
+            <Link
+              key={cat.link}
+              to={cat.link}
+              className="home-cat-card reveal reveal--fade-up"
+              style={{ '--reveal-delay': `${i * 120}ms` }}
+            >
+              <SmoothImg
+                src={`${import.meta.env.VITE_MEDIA_URL}${cat.image}`}
+                alt={cat.name}
+                loading="lazy"
+                decoding="async"
+              />
+              <div className="home-cat-card__top-info">
+                <p className="home-cat-card__hover">{cat.description}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
 
       {/* ── 3. PROFESSIONAL SERVICES ───────────────────── */}
-      <section className="home-services">
-        <div className="home-services__image-col">
+      <section className={`home-services ${servicesVisible ? 'is-visible' : ''}`} ref={servicesRef}>
+        <div className="home-services__image-col reveal reveal--slide-left">
           {settings.homepage_services_image
-            ? <img
+            ? <SmoothImg
                 src={`${import.meta.env.VITE_MEDIA_URL}${settings.homepage_services_image}`}
                 alt="Our services"
+                loading="lazy"
+                decoding="async"
               />
             : <div className="home-services__img-placeholder" />
           }
         </div>
         <div className="home-services__text-col">
           <p className="home-services__eyebrow">What We Offer</p>
-          <h2 className="home-services__headline">
+          <h2 className="home-services__headline reveal reveal--fade-up" style={{ '--reveal-delay': '150ms' }}>
             {settings.homepage_services_headline || 'Our professional services are here to assist you'}
           </h2>
-          <p className="home-services__sub">
+          <p className="home-services__sub reveal reveal--fade-up" style={{ '--reveal-delay': '300ms' }}>
             {settings.homepage_services_subtext || 'Get to know more about how we can help you from planning to construction stage.'}
           </p>
-          <Link to="/services" className="home-services__btn">
+          <Link to="/services" className="home-services__btn reveal reveal--fade-up" style={{ '--reveal-delay': '450ms' }}>
             Explore our services
           </Link>
         </div>
       </section>
 
       {/* ── 4. PROJECT MARQUEE (2 rows, opposite directions) ── */}
-      <section className="home-project-marquee">
+      <section className={`home-project-marquee ${marqueeVisible ? 'is-visible' : ''}`} ref={marqueeRef}>
         <div className="container home-project-marquee__container">
           <h2 className="home-project-marquee__headline">
             {settings.homepage_marquee_headline || 'We have solutions for every project and application'}
@@ -155,9 +175,11 @@ export default function Home() {
                 className="marquee-proj-item"
               >
                 {proj.cover_image
-                  ? <img
+                  ? <SmoothImg
                       src={`${import.meta.env.VITE_MEDIA_URL}${proj.cover_image}`}
                       alt={proj.title}
+                      loading="lazy"
+                      decoding="async"
                     />
                   : <div className="marquee-proj-item__placeholder">
                       <span>{proj.title}</span>
@@ -168,10 +190,10 @@ export default function Home() {
             );
             return (
               <div className="home-project-marquee__rows">
-                <MarqueeStrip speed={22}>
+                <MarqueeStrip speed={50}>
                   {row1.map(renderItem)}
                 </MarqueeStrip>
-                <MarqueeStrip speed={18} reverse={true}>
+                <MarqueeStrip speed={50} reverse={true}>
                   {row2.map(renderItem)}
                 </MarqueeStrip>
               </div>
@@ -184,10 +206,12 @@ export default function Home() {
       <section className="home-about" id="about">
         <div className="container home-about__inner">
           {settings.homepage_about_logo
-            ? <img
+            ? <SmoothImg
                 src={`${import.meta.env.VITE_MEDIA_URL}${settings.homepage_about_logo}`}
                 alt="Company logo"
                 className="home-about__logo-img"
+                loading="lazy"
+                decoding="async"
               />
             : <div className="home-about__logo-placeholder">
                 <span>LOGO</span>
@@ -217,8 +241,9 @@ export default function Home() {
             <h2 className="home-story__title">Our Story</h2>
             <div className="story-layout">
 
-              {/* Left — scrollable list */}
-              <div className="story-list">
+              {/* Left — scrollable list (data-lenis-prevent lets it scroll
+                  natively instead of Lenis hijacking the wheel) */}
+              <div className="story-list" data-lenis-prevent>
                 {storyMilestones.map((m, idx) => (
                   <div
                     key={m.id}
@@ -239,9 +264,11 @@ export default function Home() {
                       key={m.id}
                       className={`story-image ${activeStory === idx ? 'story-image--active' : ''}`}
                     >
-                      <img
+                      <SmoothImg
                         src={`${import.meta.env.VITE_MEDIA_URL}${m.image_url}`}
                         alt={m.year}
+                        loading="lazy"
+                        decoding="async"
                       />
                     </div>
                   )
@@ -255,7 +282,7 @@ export default function Home() {
 
       {/* ── 7. PARTNER BRANDS MARQUEE ──────────────────── */}
       {partnerBrands.length > 0 && (
-        <section className="home-partners">
+        <section className={`home-partners ${partnersVisible ? 'is-visible' : ''}`} ref={partnersRef}>
           <div className="container home-partners__container">
             <p className="home-partners__title">
               {settings.homepage_partners_title || 'Our partner brands'}
@@ -264,9 +291,11 @@ export default function Home() {
               {partnerBrands.map(brand => (
                 <div key={brand.id} className="marquee-brand-item">
                   {brand.logo_path
-                    ? <img
+                    ? <SmoothImg
                         src={`${import.meta.env.VITE_MEDIA_URL}${brand.logo_path}`}
                         alt={brand.name}
+                        loading="lazy"
+                        decoding="async"
                       />
                     : <span className="marquee-brand-item__name">{brand.name}</span>
                   }

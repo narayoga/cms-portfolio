@@ -22,9 +22,10 @@ class DownloadController
         $b = Validator::body();
         Validator::require($b, ['title']);
         $id = Db::insert(
-            'INSERT INTO downloads (title, description, image_path, file_path, sort_order, is_active) VALUES (?, ?, ?, ?, ?, ?)',
+            'INSERT INTO downloads (title, section, description, image_path, file_path, sort_order, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)',
             [
                 $b['title'],
+                in_array($b['section'] ?? 'catalogues', ['catalogues', 'manuals'], true) ? $b['section'] : 'catalogues',
                 $b['description'] ?? null,
                 $b['image_path'] ?? null,
                 $b['file_path'] ?? null,
@@ -43,9 +44,10 @@ class DownloadController
         $row = Db::one('SELECT * FROM downloads WHERE id = ?', [$id]);
         if (!$row) Response::error('Not found', 404);
         Db::exec(
-            'UPDATE downloads SET title = ?, description = ?, image_path = ?, file_path = ?, sort_order = ?, is_active = ? WHERE id = ?',
+            'UPDATE downloads SET title = ?, section = ?, description = ?, image_path = ?, file_path = ?, sort_order = ?, is_active = ? WHERE id = ?',
             [
                 $b['title'] ?? $row['title'],
+                in_array($b['section'] ?? $row['section'], ['catalogues', 'manuals'], true) ? ($b['section'] ?? $row['section']) : 'catalogues',
                 $b['description'] ?? $row['description'],
                 $b['image_path'] ?? $row['image_path'],
                 $b['file_path'] ?? $row['file_path'],

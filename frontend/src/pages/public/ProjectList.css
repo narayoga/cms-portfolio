@@ -1,0 +1,64 @@
+/* ================================================================
+   Project References — masonry (equal width, variable height)
+   ================================================================ */
+
+.proj-container {
+  max-width: 1920px;
+  margin: 0 auto;
+  padding: var(--sp-7) 50px var(--sp-9);
+}
+
+.proj-masonry {
+  column-count: 3;
+  column-gap: 40px;
+}
+
+.proj-card {
+  display: block;
+  break-inside: avoid;
+  margin-bottom: 40px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.proj-card-img { overflow: hidden; }
+.proj-card-img img {
+  width: 100%;
+  height: auto;
+  display: block;
+  transition: transform 0.5s ease;
+}
+.proj-card:hover .proj-card-img img { transform: scale(1.03); }
+.proj-card-ph { width: 100%; aspect-ratio: 4 / 3; background: var(--color-bg-alt); }
+
+.proj-card-year {
+  margin-top: var(--sp-4);
+  font-style: italic;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+.proj-card-title {
+  margin: var(--sp-2) 0 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.35rem;
+  line-height: 1.2;
+  color: var(--color-text);
+  transition: color var(--transition);
+}
+.proj-card:hover .proj-card-title { color: var(--color-primary); }
+.proj-card-cat {
+  margin-top: var(--sp-2);
+  font-size: 0.95rem;
+  color: var(--color-text-muted);
+}
+
+/* ── Responsive ── */
+@media (max-width: 1024px) {
+  .proj-container { padding-inline: var(--sp-5); }
+  .proj-masonry { column-count: 2; column-gap: var(--sp-5); }
+  .proj-card { margin-bottom: var(--sp-5); }
+}
+@media (max-width: 640px) {
+  .proj-masonry { column-count: 1; }
+}

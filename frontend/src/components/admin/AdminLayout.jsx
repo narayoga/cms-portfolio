@@ -10,6 +10,7 @@ export default function AdminLayout() {
     { to: '/admin', label: 'Dashboard', end: true },
     { to: '/admin/categories', label: 'Categories' },
     { to: '/admin/subcategories', label: 'Sub-categories' },
+    { to: '/admin/catalog-items', label: 'Catalog Items' },
     { to: '/admin/products', label: 'Products' },
     { to: '/admin/projects', label: 'Projects' },
     { to: '/admin/publications', label: 'Publications' },

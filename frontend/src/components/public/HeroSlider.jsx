@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { mediaUrl } from '../../api/client';
+import SmoothImg from './SmoothImg.jsx';
 import './HeroSlider.css';
 
 const DURATION = 6000; // ms per slide
@@ -99,6 +100,10 @@ export default function HeroSlider({ banners = [] }) {
 
         let cls = 'hero-slide';
         if (isPre)                              cls += ' is-pre';
+        // Pre-frame (prev dir): this slide is both the current idx and the
+        // exiting one. Hold it static at translateX(0) so it doesn't jump
+        // off-screen before the entering slide is ready → no black flash.
+        else if (isActive && isExiting)         cls += ' is-visible';
         else if (isActive && isTransitioning)   cls += ` is-active dir-${dir}`;
         else if (isActive && !isTransitioning)  cls += ' is-visible';
         else if (isExiting)                     cls += ` is-exiting dir-${dir}`;
@@ -106,7 +111,14 @@ export default function HeroSlider({ banners = [] }) {
 
         return (
           <div key={b.id} className={cls}>
-            <img src={mediaUrl(b.image_path)} alt={b.title || ''} draggable={false} />
+            <SmoothImg
+              src={mediaUrl(b.image_path)}
+              alt={b.title || ''}
+              draggable={false}
+              loading={i === 0 ? 'eager' : 'lazy'}
+              fetchpriority={i === 0 ? 'high' : 'low'}
+              decoding="async"
+            />
             <div className="hero-overlay" />
             <div key={contentSlotKey[i] ?? `init-${i}`} className="container hero-content">
               {b.title    && <h1>{b.title}</h1>}
@@ -122,13 +134,13 @@ export default function HeroSlider({ banners = [] }) {
       {/* ── Arrows ─────────────────────────────────────────── */}
       {n > 1 && (
         <>
-          <button className="hero-arrow hero-arrow--prev" onClick={prev} aria-label="Previous slide">
+          <button className="hero-arrow hero-arrow--prev" onClick={prev} onPointerDown={(e) => e.stopPropagation()} aria-label="Previous slide">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
                  strokeLinecap="round" strokeLinejoin="round">
               <polyline points="15 18 9 12 15 6" />
             </svg>
           </button>
-          <button className="hero-arrow hero-arrow--next" onClick={next} aria-label="Next slide">
+          <button className="hero-arrow hero-arrow--next" onClick={next} onPointerDown={(e) => e.stopPropagation()} aria-label="Next slide">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
                  strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 18 15 12 9 6" />

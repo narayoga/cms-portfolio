@@ -4,7 +4,7 @@ import Modal from '../../components/admin/Modal.jsx';
 import ImageUpload from '../../components/admin/ImageUpload.jsx';
 import FileUpload from '../../components/admin/FileUpload.jsx';
 
-const blank = { title: '', description: '', image_path: '', file_path: '', sort_order: 0, is_active: 1 };
+const blank = { title: '', section: 'catalogues', description: '', image_path: '', file_path: '', sort_order: 0, is_active: 1 };
 
 export default function Downloads() {
   const [rows, setRows] = useState([]);
@@ -42,11 +42,12 @@ export default function Downloads() {
         <button className="btn btn-primary" onClick={openNew}>+ New Download</button>
       </div>
       <table className="admin-table">
-        <thead><tr><th>Title</th><th>File</th><th>Order</th><th>Status</th><th></th></tr></thead>
+        <thead><tr><th>Title</th><th>Section</th><th>File</th><th>Order</th><th>Status</th><th></th></tr></thead>
         <tbody>
           {rows.map(r => (
             <tr key={r.id}>
               <td>{r.title}</td>
+              <td style={{ textTransform: 'capitalize' }}>{r.section}</td>
               <td style={{ fontSize: '.85rem', color: 'var(--color-text-muted)' }}>{r.file_path || '—'}</td>
               <td>{r.sort_order}</td>
               <td>{r.is_active ? 'Active' : 'Hidden'}</td>
@@ -58,13 +59,22 @@ export default function Downloads() {
               </td>
             </tr>
           ))}
-          {!rows.length && <tr><td colSpan={5} className="empty">No items yet.</td></tr>}
+          {!rows.length && <tr><td colSpan={6} className="empty">No items yet.</td></tr>}
         </tbody>
       </table>
 
       <Modal open={open} title={form.id ? 'Edit Download' : 'New Download'} onClose={() => setOpen(false)}>
         <form className="admin-form" onSubmit={save}>
-          <label><span>Title *</span><input required value={form.title} onChange={set('title')} /></label>
+          <div className="form-row">
+            <label><span>Title *</span><input required value={form.title} onChange={set('title')} /></label>
+            <label>
+              <span>Section *</span>
+              <select value={form.section} onChange={set('section')}>
+                <option value="catalogues">Product Catalogues</option>
+                <option value="manuals">Product Manuals</option>
+              </select>
+            </label>
+          </div>
           <label><span>Description</span><textarea value={form.description || ''} onChange={set('description')} /></label>
           <ImageUpload value={form.image_path} onChange={(v) => setForm(f => ({ ...f, image_path: v }))} label="Thumbnail image" />
           <FileUpload value={form.file_path} onChange={(v) => setForm(f => ({ ...f, file_path: v }))} label="Downloadable file" />
