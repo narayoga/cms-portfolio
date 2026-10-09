@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
-import { queryAll, queryOne, insert, execute } from '../lib/db';
-import type { SqlValue } from '../lib/db';
+import { queryAll, queryOne, insert, execute, withTransaction } from '../lib/db';
+import type { SqlValue, Transaction } from '../lib/db';
 import { sendOk, sendError } from '../lib/response';
 import {
   getBody,
@@ -91,21 +91,27 @@ export async function createProduct(request: Request, response: Response) {
     scopeValue: subcategoryId,
   });
 
-  const newProductId = await insert(
-    'INSERT INTO products (subcategory_id, name, slug, short_desc, content_html, cover_image, sort_order, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    [
-      subcategoryId,
-      body.name,
-      slug,
-      valueOrFallback(body, 'short_desc', null),
-      valueOrFallback(body, 'content_html', null),
-      valueOrFallback(body, 'cover_image', null),
-      toInteger(valueOrFallback(body, 'sort_order', 0)),
-      activeFlagForInsert(body),
-    ]
-  );
+  // The product and its gallery are saved together: if one image fails, nothing is saved
+  const newProductId = await withTransaction(async function (transaction) {
+    const productId = await insert(
+      'INSERT INTO products (subcategory_id, name, slug, short_desc, content_html, cover_image, sort_order, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        subcategoryId,
+        body.name,
+        slug,
+        valueOrFallback(body, 'short_desc', null),
+        valueOrFallback(body, 'content_html', null),
+        valueOrFallback(body, 'cover_image', null),
+        toInteger(valueOrFallback(body, 'sort_order', 0)),
+        activeFlagForInsert(body),
+      ],
+      transaction
+    );
 
-  await saveGalleryImages(newProductId, valueOrFallback(body, 'images', []));
+    await saveGalleryImages(productId, valueOrFallback(body, 'images', []), transaction);
+
+    return productId;
+  });
 
   sendOk(response, { id: newProductId, slug: slug });
 }
@@ -144,25 +150,31 @@ export async function updateProduct(request: Request, response: Response) {
     });
   }
 
-  await execute(
-    'UPDATE products SET subcategory_id = ?, name = ?, slug = ?, short_desc = ?, content_html = ?, cover_image = ?, sort_order = ?, is_active = ? WHERE id = ?',
-    [
-      subcategoryId,
-      valueOrFallback(body, 'name', existingProduct.name),
-      slug,
-      valueOrFallback(body, 'short_desc', existingProduct.short_desc),
-      valueOrFallback(body, 'content_html', existingProduct.content_html),
-      valueOrFallback(body, 'cover_image', existingProduct.cover_image),
-      toInteger(valueOrFallback(body, 'sort_order', existingProduct.sort_order)),
-      activeFlagForUpdate(body, existingProduct.is_active),
-      productId,
-    ]
-  );
+  // The product and its gallery are saved together. The old gallery is deleted
+  // before the new one is saved, so without a transaction a failure in between
+  // would leave the product without any images.
+  await withTransaction(async function (transaction) {
+    await execute(
+      'UPDATE products SET subcategory_id = ?, name = ?, slug = ?, short_desc = ?, content_html = ?, cover_image = ?, sort_order = ?, is_active = ? WHERE id = ?',
+      [
+        subcategoryId,
+        valueOrFallback(body, 'name', existingProduct.name),
+        slug,
+        valueOrFallback(body, 'short_desc', existingProduct.short_desc),
+        valueOrFallback(body, 'content_html', existingProduct.content_html),
+        valueOrFallback(body, 'cover_image', existingProduct.cover_image),
+        toInteger(valueOrFallback(body, 'sort_order', existingProduct.sort_order)),
+        activeFlagForUpdate(body, existingProduct.is_active),
+        productId,
+      ],
+      transaction
+    );
 
-  if (hasField(body, 'images')) {
-    await execute('DELETE FROM product_images WHERE product_id = ?', [productId]);
-    await saveGalleryImages(productId, body.images);
-  }
+    if (hasField(body, 'images')) {
+      await execute('DELETE FROM product_images WHERE product_id = ?', [productId], transaction);
+      await saveGalleryImages(productId, body.images, transaction);
+    }
+  });
 
   sendOk(response, { id: productId });
 }
@@ -183,9 +195,9 @@ export async function deleteProduct(request: Request, response: Response) {
 }
 
 /**
- * Save a list of gallery image paths for a product.
+ * Save a list of gallery image paths for a product (inside the given transaction).
  */
-async function saveGalleryImages(productId: number, images: any): Promise<void> {
+async function saveGalleryImages(productId: number, images: any, transaction: Transaction): Promise<void> {
   if (Array.isArray(images) === false) {
     return;
   }
@@ -198,7 +210,8 @@ async function saveGalleryImages(productId: number, images: any): Promise<void> 
 
     await insert(
       'INSERT INTO product_images (product_id, image_path, sort_order) VALUES (?, ?, ?)',
-      [productId, imagePath, sortOrder]
+      [productId, imagePath, sortOrder],
+      transaction
     );
     sortOrder = sortOrder + 1;
   }

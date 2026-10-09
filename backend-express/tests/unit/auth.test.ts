@@ -1,9 +1,19 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import jwt from 'jsonwebtoken';
-import { createToken, readToken, requireLogin, requireAdmin } from '../../src/lib/auth';
+import {
+  createToken,
+  readToken,
+  requireLogin,
+  requireAdmin,
+  findJwtSecretProblem,
+  assertJwtSecretIsSafe,
+} from '../../src/lib/auth';
 
 const ADMIN = { id: 1, role: 'admin', name: 'Admin', email: 'admin@example.com' };
 const EDITOR = { id: 2, role: 'editor', name: 'Editor', email: 'editor@example.com' };
+
+// Long enough to pass the JWT_SECRET safety check (at least 32 characters)
+const UNIT_TEST_SECRET = 'unit-test-secret-that-is-long-enough-1234';
 
 /**
  * A fake Express response that remembers the status code and JSON body.
@@ -37,7 +47,7 @@ function makeFakeRequest(authorizationHeader?: string): any {
 }
 
 beforeEach(function () {
-  vi.stubEnv('JWT_SECRET', 'unit-test-secret');
+  vi.stubEnv('JWT_SECRET', UNIT_TEST_SECRET);
   vi.stubEnv('JWT_TTL', '3600');
 });
 
@@ -139,5 +149,44 @@ describe('requireAdmin middleware', function () {
     requireAdmin(makeFakeRequest('Bearer ' + token), response, next);
 
     expect(next).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('JWT_SECRET safety check', function () {
+  it('rejects a missing secret', function () {
+    expect(findJwtSecretProblem('')).toBe('JWT_SECRET is not set in .env');
+  });
+
+  it('rejects the old public default "dev-secret"', function () {
+    expect(findJwtSecretProblem('dev-secret')).toContain('public in the repository');
+  });
+
+  it('rejects a secret shorter than 32 characters', function () {
+    expect(findJwtSecretProblem('short-secret')).toContain('too short (12 characters');
+  });
+
+  it('accepts a long random secret', function () {
+    expect(findJwtSecretProblem(UNIT_TEST_SECRET)).toBe(null);
+  });
+
+  it('there is no fallback: without JWT_SECRET no token can be created', function () {
+    vi.stubEnv('JWT_SECRET', '');
+
+    expect(function () {
+      createToken(ADMIN);
+    }).toThrow('JWT_SECRET is not set in .env');
+    expect(function () {
+      assertJwtSecretIsSafe();
+    }).toThrow();
+  });
+
+  it('a token signed with the old "dev-secret" is never accepted', function () {
+    const forgedToken = jwt.sign({ sub: 1, role: 'admin', name: 'Hacker', email: 'x@x.x' }, 'dev-secret');
+
+    expect(readToken(forgedToken)).toBe(null);
+
+    // Even if the server is (wrongly) configured with "dev-secret"
+    vi.stubEnv('JWT_SECRET', 'dev-secret');
+    expect(readToken(forgedToken)).toBe(null);
   });
 });

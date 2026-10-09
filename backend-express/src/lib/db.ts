@@ -48,28 +48,62 @@ export async function queryOne<RowType = Record<string, any>>(
   return rows[0];
 }
 
+// The connection that withTransaction() gives you.
+// Pass it to execute() / insert() to run that query inside the transaction.
+export type Transaction = mysql.PoolConnection;
+
+/**
+ * Run an INSERT / UPDATE / DELETE, either on the pool (normal)
+ * or on the connection of a transaction (when "transaction" is given).
+ */
+async function runWriteQuery(sql: string, params: SqlValue[], transaction: Transaction | null): Promise<ResultSetHeader> {
+  if (transaction === null) {
+    const [result] = await pool.query<ResultSetHeader>(sql, params);
+    return result;
+  }
+
+  const [result] = await transaction.query<ResultSetHeader>(sql, params);
+  return result;
+}
+
 /**
  * Run an UPDATE / DELETE and return how many rows were affected.
+ * Inside withTransaction(), pass the transaction as the third argument.
  */
-export async function execute(sql: string, params: SqlValue[] = []): Promise<number> {
-  const [result] = await pool.query<ResultSetHeader>(sql, params);
+export async function execute(
+  sql: string,
+  params: SqlValue[] = [],
+  transaction: Transaction | null = null
+): Promise<number> {
+  const result = await runWriteQuery(sql, params, transaction);
   return result.affectedRows;
 }
 
 /**
  * Run an INSERT and return the new row id.
+ * Inside withTransaction(), pass the transaction as the third argument.
  */
-export async function insert(sql: string, params: SqlValue[] = []): Promise<number> {
-  const [result] = await pool.query<ResultSetHeader>(sql, params);
+export async function insert(
+  sql: string,
+  params: SqlValue[] = [],
+  transaction: Transaction | null = null
+): Promise<number> {
+  const result = await runWriteQuery(sql, params, transaction);
   return result.insertId;
 }
 
 /**
- * Run several queries inside one transaction.
+ * Run several queries inside one transaction: either ALL changes are saved, or none.
  * If anything inside "work" throws an error, every change is rolled back.
+ *
+ * Usage:
+ *   await withTransaction(async function (transaction) {
+ *     await execute('DELETE FROM product_images WHERE product_id = ?', [productId], transaction);
+ *     await insert('INSERT INTO product_images ...', [...], transaction);
+ *   });
  */
 export async function withTransaction<ResultType>(
-  work: (connection: mysql.PoolConnection) => Promise<ResultType>
+  work: (transaction: Transaction) => Promise<ResultType>
 ): Promise<ResultType> {
   const connection = await pool.getConnection();
 

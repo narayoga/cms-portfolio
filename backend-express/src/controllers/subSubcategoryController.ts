@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
-import { queryAll, queryOne, insert, execute } from '../lib/db';
-import type { SqlValue } from '../lib/db';
+import { queryAll, queryOne, insert, execute, withTransaction } from '../lib/db';
+import type { SqlValue, Transaction } from '../lib/db';
 import { sendOk, sendError } from '../lib/response';
 import {
   getBody,
@@ -25,17 +25,6 @@ import type { SubSubcategoryRow, SubSubcategoryFeatureRow } from '../types/datab
  */
 
 const ALLOWED_TYPES = ['group', 'product'];
-
-/**
- * Return the type when it is allowed, otherwise "product".
- */
-function chooseItemType(requestedType: any): string {
-  if (ALLOWED_TYPES.includes(requestedType)) {
-    return requestedType;
-  }
-
-  return 'product';
-}
 
 /**
  * parent_id from the body: a number, or null when empty.
@@ -173,6 +162,13 @@ export async function createSubSubcategory(request: Request, response: Response)
 
   const subcategoryId = toInteger(body.subcategory_id);
 
+  // A new item is a "product" unless "group" is chosen
+  const itemType = valueOrFallback(body, 'type', 'product');
+  if (ALLOWED_TYPES.includes(itemType) === false) {
+    sendError(response, 'Invalid type', 422);
+    return;
+  }
+
   const subcategoryExists = await rowExists('subcategories', subcategoryId);
   if (subcategoryExists === false) {
     sendError(response, 'Subcategory not found', 422);
@@ -192,24 +188,30 @@ export async function createSubSubcategory(request: Request, response: Response)
     scopeValue: subcategoryId,
   });
 
-  const newItemId = await insert(
-    `INSERT INTO sub_subcategories (subcategory_id, parent_id, type, name, slug, description, image_path, brand_logo, sort_order, is_active)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      subcategoryId,
-      parentId,
-      chooseItemType(valueOrFallback(body, 'type', 'product')),
-      body.name,
-      slug,
-      valueOrFallback(body, 'description', null),
-      valueOrFallback(body, 'image_path', null),
-      valueOrFallback(body, 'brand_logo', null),
-      toInteger(valueOrFallback(body, 'sort_order', 0)),
-      activeFlagForInsert(body),
-    ]
-  );
+  // The item, its advantages and its features are saved together (all or nothing)
+  const newItemId = await withTransaction(async function (transaction) {
+    const itemId = await insert(
+      `INSERT INTO sub_subcategories (subcategory_id, parent_id, type, name, slug, description, image_path, brand_logo, sort_order, is_active)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        subcategoryId,
+        parentId,
+        itemType,
+        body.name,
+        slug,
+        valueOrFallback(body, 'description', null),
+        valueOrFallback(body, 'image_path', null),
+        valueOrFallback(body, 'brand_logo', null),
+        toInteger(valueOrFallback(body, 'sort_order', 0)),
+        activeFlagForInsert(body),
+      ],
+      transaction
+    );
 
-  await saveAdvantagesAndFeatures(newItemId, body);
+    await saveAdvantagesAndFeatures(itemId, body, transaction);
+
+    return itemId;
+  });
 
   sendOk(response, { id: newItemId, slug: slug });
 }
@@ -224,6 +226,11 @@ export async function updateSubSubcategory(request: Request, response: Response)
   const existingItem = await queryOne<SubSubcategoryRow>('SELECT * FROM sub_subcategories WHERE id = ?', [itemId]);
   if (existingItem === null) {
     sendError(response, 'Not found', 404);
+    return;
+  }
+
+  if (hasValue(body, 'type') && ALLOWED_TYPES.includes(body.type) === false) {
+    sendError(response, 'Invalid type', 422);
     return;
   }
 
@@ -262,24 +269,29 @@ export async function updateSubSubcategory(request: Request, response: Response)
     }
   }
 
-  await execute(
-    'UPDATE sub_subcategories SET subcategory_id = ?, parent_id = ?, type = ?, name = ?, slug = ?, description = ?, image_path = ?, brand_logo = ?, sort_order = ?, is_active = ? WHERE id = ?',
-    [
-      subcategoryId,
-      parentId,
-      chooseItemType(valueOrFallback(body, 'type', existingItem.type)),
-      valueOrFallback(body, 'name', existingItem.name),
-      slug,
-      valueOrFallback(body, 'description', existingItem.description),
-      valueOrFallback(body, 'image_path', existingItem.image_path),
-      valueOrFallback(body, 'brand_logo', existingItem.brand_logo),
-      toInteger(valueOrFallback(body, 'sort_order', existingItem.sort_order)),
-      activeFlagForUpdate(body, existingItem.is_active),
-      itemId,
-    ]
-  );
+  // Advantages and features are deleted and saved again, so this must be
+  // all or nothing: otherwise a failure in between would lose them
+  await withTransaction(async function (transaction) {
+    await execute(
+      'UPDATE sub_subcategories SET subcategory_id = ?, parent_id = ?, type = ?, name = ?, slug = ?, description = ?, image_path = ?, brand_logo = ?, sort_order = ?, is_active = ? WHERE id = ?',
+      [
+        subcategoryId,
+        parentId,
+        valueOrFallback(body, 'type', existingItem.type),
+        valueOrFallback(body, 'name', existingItem.name),
+        slug,
+        valueOrFallback(body, 'description', existingItem.description),
+        valueOrFallback(body, 'image_path', existingItem.image_path),
+        valueOrFallback(body, 'brand_logo', existingItem.brand_logo),
+        toInteger(valueOrFallback(body, 'sort_order', existingItem.sort_order)),
+        activeFlagForUpdate(body, existingItem.is_active),
+        itemId,
+      ],
+      transaction
+    );
 
-  await saveAdvantagesAndFeatures(itemId, body);
+    await saveAdvantagesAndFeatures(itemId, body, transaction);
+  });
 
   sendOk(response, { id: itemId });
 }
@@ -301,12 +313,12 @@ export async function deleteSubSubcategory(request: Request, response: Response)
 
 /**
  * Replace the advantages and/or features of an item,
- * but only when the request contains those arrays.
+ * but only when the request contains those arrays (inside the given transaction).
  */
-async function saveAdvantagesAndFeatures(itemId: number, body: RequestBody): Promise<void> {
+async function saveAdvantagesAndFeatures(itemId: number, body: RequestBody, transaction: Transaction): Promise<void> {
   // --- Advantages: a list of text labels ---
   if (hasField(body, 'advantages') && Array.isArray(body.advantages)) {
-    await execute('DELETE FROM sub_subcategory_advantages WHERE sub_subcategory_id = ?', [itemId]);
+    await execute('DELETE FROM sub_subcategory_advantages WHERE sub_subcategory_id = ?', [itemId], transaction);
 
     let sortOrder = 1;
     for (const advantage of body.advantages) {
@@ -317,7 +329,8 @@ async function saveAdvantagesAndFeatures(itemId: number, body: RequestBody): Pro
 
       await insert(
         'INSERT INTO sub_subcategory_advantages (sub_subcategory_id, label, sort_order) VALUES (?, ?, ?)',
-        [itemId, label, sortOrder]
+        [itemId, label, sortOrder],
+        transaction
       );
       sortOrder = sortOrder + 1;
     }
@@ -325,7 +338,7 @@ async function saveAdvantagesAndFeatures(itemId: number, body: RequestBody): Pro
 
   // --- Features: a list of { title, images?: string[], image_path?, description? } ---
   if (hasField(body, 'features') && Array.isArray(body.features)) {
-    await execute('DELETE FROM sub_subcategory_features WHERE sub_subcategory_id = ?', [itemId]);
+    await execute('DELETE FROM sub_subcategory_features WHERE sub_subcategory_id = ?', [itemId], transaction);
 
     let sortOrder = 1;
     for (const feature of body.features) {
@@ -363,7 +376,8 @@ async function saveAdvantagesAndFeatures(itemId: number, body: RequestBody): Pro
 
       await insert(
         'INSERT INTO sub_subcategory_features (sub_subcategory_id, title, image_path, images, description, sort_order) VALUES (?, ?, ?, ?, ?, ?)',
-        [itemId, title, firstImage, imagesText, valueOrFallback(feature, 'description', null), sortOrder]
+        [itemId, title, firstImage, imagesText, valueOrFallback(feature, 'description', null), sortOrder],
+        transaction
       );
       sortOrder = sortOrder + 1;
     }

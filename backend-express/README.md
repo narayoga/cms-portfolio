@@ -73,6 +73,16 @@ used in more than one place). `uploads-unused/` holds files that nothing uses.
 To change the structure later, add a new file such as `migrations/001_add_video_url.sql`
 and run `npm run db:migrate`.
 
+## Security
+
+| What | Where | Setting in `../.env` |
+|---|---|---|
+| The server **refuses to start** when `JWT_SECRET` is missing, shorter than 32 characters, or a value that is public in this repo (`dev-secret`). Otherwise anyone could create an admin login token. | `src/lib/auth.ts`, `src/server.ts` | `JWT_SECRET` |
+| Security headers (Content-Security-Policy, HSTS, nosniff, frame options, ...) via Helmet. `Cross-Origin-Resource-Policy` is `cross-origin`, so the website on another domain can show `/uploads` images. | `src/app.ts` | — |
+| Rate limits per IP: failed logins (10 per 15 min) and contact messages (5 per hour) answer `429`. | `src/lib/rateLimit.ts` | `LOGIN_RATE_LIMIT`, `CONTACT_RATE_LIMIT` |
+| Behind a reverse proxy, set `TRUST_PROXY=1` so the real visitor IP is used — otherwise all visitors share one IP and block each other. | `src/app.ts` | `TRUST_PROXY` |
+| Saving a product (with its gallery) and a catalog item (with advantages/features) runs in a **transaction**: all or nothing. | `withTransaction()` in `src/lib/db.ts` | — |
+
 ## API documentation
 
 Open **http://localhost:8000/api/docs** (Swagger UI) while the backend runs.

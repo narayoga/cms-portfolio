@@ -65,6 +65,93 @@ describe('Catalog: category → subcategory → product', function () {
     expect(hiddenResponse.status).toBe(404);
   });
 
+  describe('product gallery and admin product API', function () {
+    let subcategoryId = 0;
+    let productId = 0;
+
+    /**
+     * The gallery image paths of a product, read through the admin API.
+     */
+    async function getGallery(id: number): Promise<string[]> {
+      const response = await request(app)
+        .get('/api/admin/products/' + id)
+        .set('Authorization', bearer(editorToken));
+
+      return response.body.data.images.map(function (image: any) {
+        return image.image_path;
+      });
+    }
+
+    beforeAll(async function () {
+      const category = await createItem('/api/admin/categories', { name: 'Gallery ' + uniqueSuffix() });
+      const subcategory = await createItem('/api/admin/subcategories', { name: 'Hinges', category_id: category.id });
+      subcategoryId = subcategory.id;
+
+      const product = await createItem('/api/admin/products', {
+        name: 'Hinge H-1',
+        subcategory_id: subcategoryId,
+        images: ['/uploads/products/1.jpg', '', '/uploads/products/2.jpg'],
+      });
+      productId = product.id;
+    });
+
+    it('saves the gallery in order and skips empty paths', async function () {
+      expect(await getGallery(productId)).toEqual(['/uploads/products/1.jpg', '/uploads/products/2.jpg']);
+    });
+
+    it('an update without "images" keeps the gallery', async function () {
+      await request(app)
+        .put('/api/admin/products/' + productId)
+        .set('Authorization', bearer(editorToken))
+        .send({ short_desc: 'Stainless steel hinge' });
+
+      expect(await getGallery(productId)).toEqual(['/uploads/products/1.jpg', '/uploads/products/2.jpg']);
+    });
+
+    it('sending "images" replaces the whole gallery (also in a new order)', async function () {
+      await request(app)
+        .put('/api/admin/products/' + productId)
+        .set('Authorization', bearer(editorToken))
+        .send({ images: ['/uploads/products/3.jpg', '/uploads/products/1.jpg'] });
+
+      expect(await getGallery(productId)).toEqual(['/uploads/products/3.jpg', '/uploads/products/1.jpg']);
+    });
+
+    it('sending an empty "images" list removes every gallery image', async function () {
+      await request(app)
+        .put('/api/admin/products/' + productId)
+        .set('Authorization', bearer(editorToken))
+        .send({ images: [] });
+
+      expect(await getGallery(productId)).toEqual([]);
+    });
+
+    it('the admin list can be filtered by subcategory and shows the category names', async function () {
+      const response = await request(app)
+        .get('/api/admin/products?subcategory_id=' + subcategoryId)
+        .set('Authorization', bearer(editorToken));
+
+      expect(response.status).toBe(200);
+      expect(response.body.data.length).toBe(1);
+      expect(response.body.data[0].name).toBe('Hinge H-1');
+      expect(response.body.data[0].subcategory_name).toBe('Hinges');
+      expect(response.body.data[0].short_desc).toBe('Stainless steel hinge');
+    });
+
+    it('answers 404 for a product that does not exist', async function () {
+      const getResponse = await request(app)
+        .get('/api/admin/products/99999999')
+        .set('Authorization', bearer(editorToken));
+      const updateResponse = await request(app)
+        .put('/api/admin/products/99999999')
+        .set('Authorization', bearer(editorToken))
+        .send({ name: 'Ghost' });
+
+      expect(getResponse.status).toBe(404);
+      expect(updateResponse.status).toBe(404);
+    });
+  });
+
   it('category slugs are unique across the whole table', async function () {
     const name = 'Hinges ' + uniqueSuffix();
 
