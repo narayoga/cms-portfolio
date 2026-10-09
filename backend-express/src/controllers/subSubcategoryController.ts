@@ -16,7 +16,7 @@ import {
   activeFlagForUpdate,
 } from '../lib/values';
 import type { RequestBody } from '../lib/values';
-import { findMissingField, makeSlug, makeUniqueSlug } from '../lib/validator';
+import { findMissingField, makeSlug, makeUniqueSlug, rowExists } from '../lib/validator';
 import type { SubSubcategoryRow, SubSubcategoryFeatureRow } from '../types/database';
 
 /**
@@ -46,6 +46,42 @@ function parentIdFromBody(body: RequestBody): number | null {
   }
 
   return toInteger(body.parent_id);
+}
+
+/**
+ * Check the parent of an item. Returns an error message, or null when the parent is fine.
+ *
+ *   parentId       the parent to check (null = no parent, always fine)
+ *   subcategoryId  the subcategory the item belongs to
+ *   itemId         the item itself (null when creating a new item)
+ */
+async function findParentProblem(
+  parentId: number | null,
+  subcategoryId: number,
+  itemId: number | null
+): Promise<string | null> {
+  if (parentId === null) {
+    return null;
+  }
+
+  if (itemId !== null && parentId === itemId) {
+    return 'An item cannot be its own parent';
+  }
+
+  const parent = await queryOne<SubSubcategoryRow>('SELECT * FROM sub_subcategories WHERE id = ?', [parentId]);
+  if (parent === null) {
+    return 'Parent not found';
+  }
+
+  if (parent.type !== 'group') {
+    return 'Parent must be a group';
+  }
+
+  if (toInteger(parent.subcategory_id) !== subcategoryId) {
+    return 'Parent must be in the same subcategory';
+  }
+
+  return null;
 }
 
 /**
@@ -137,6 +173,19 @@ export async function createSubSubcategory(request: Request, response: Response)
 
   const subcategoryId = toInteger(body.subcategory_id);
 
+  const subcategoryExists = await rowExists('subcategories', subcategoryId);
+  if (subcategoryExists === false) {
+    sendError(response, 'Subcategory not found', 422);
+    return;
+  }
+
+  const parentId = parentIdFromBody(body);
+  const parentProblem = await findParentProblem(parentId, subcategoryId, null);
+  if (parentProblem !== null) {
+    sendError(response, parentProblem, 422);
+    return;
+  }
+
   const slugSource = valueOrFallback(body, 'slug', body.name);
   const slug = await makeUniqueSlug('sub_subcategories', makeSlug(slugSource), {
     scopeColumn: 'subcategory_id',
@@ -148,7 +197,7 @@ export async function createSubSubcategory(request: Request, response: Response)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       subcategoryId,
-      parentIdFromBody(body),
+      parentId,
       chooseItemType(valueOrFallback(body, 'type', 'product')),
       body.name,
       slug,
@@ -181,6 +230,12 @@ export async function updateSubSubcategory(request: Request, response: Response)
   let subcategoryId = toInteger(existingItem.subcategory_id);
   if (hasValue(body, 'subcategory_id')) {
     subcategoryId = toInteger(body.subcategory_id);
+
+    const subcategoryExists = await rowExists('subcategories', subcategoryId);
+    if (subcategoryExists === false) {
+      sendError(response, 'Subcategory not found', 422);
+      return;
+    }
   }
 
   let slug = existingItem.slug;
@@ -196,6 +251,15 @@ export async function updateSubSubcategory(request: Request, response: Response)
   let parentId = existingItem.parent_id;
   if (hasField(body, 'parent_id')) {
     parentId = parentIdFromBody(body);
+  }
+
+  // Only check the parent when the parent or the subcategory is being changed
+  if (hasField(body, 'parent_id') || hasValue(body, 'subcategory_id')) {
+    const parentProblem = await findParentProblem(parentId, subcategoryId, itemId);
+    if (parentProblem !== null) {
+      sendError(response, parentProblem, 422);
+      return;
+    }
   }
 
   await execute(
@@ -226,7 +290,11 @@ export async function updateSubSubcategory(request: Request, response: Response)
 export async function deleteSubSubcategory(request: Request, response: Response) {
   const itemId = toInteger(request.params.id);
 
-  await execute('DELETE FROM sub_subcategories WHERE id = ?', [itemId]);
+  const deletedRowCount = await execute('DELETE FROM sub_subcategories WHERE id = ?', [itemId]);
+  if (deletedRowCount === 0) {
+    sendError(response, 'Not found', 404);
+    return;
+  }
 
   sendOk(response);
 }

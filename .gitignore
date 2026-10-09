@@ -14,3 +14,6 @@ backend/uploads-backup-original/
 
 # Claude Code local settings (machine-specific)
 .claude/settings.local.json
+
+# Test database credentials (used only by backend-express tests)
+.env.test

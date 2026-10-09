@@ -1,0 +1,3893 @@
+openapi: 3.0.3
+
+info:
+  title: Portfolio CMS API
+  version: 1.0.0
+  description: |
+    REST API for the portfolio website and its admin panel (Express 5 + TypeScript).
+
+    ## Response format (the "envelope")
+
+    Every response is JSON and always has the same outer shape.
+
+    Success (HTTP 200):
+
+    ```json
+    { "ok": true, "data": { "id": 12, "slug": "park-hyatt-jakarta" } }
+    ```
+
+    Error (HTTP 4xx / 5xx):
+
+    ```json
+    { "ok": false, "error": "Missing field: title" }
+    ```
+
+    So you can always check `ok` first. When `ok` is `true`, read `data`
+    (it can be an object, a list, or `null`). When `ok` is `false`, show `error`.
+
+    Errors that can happen on any route:
+
+    - `400 Invalid JSON body` - the body is not valid JSON.
+    - `413 Request body too large` - the JSON body is bigger than 10 MB.
+    - `404 Not found` - the URL does not exist.
+    - `500 Server error` or `500 Database connection failed`.
+
+    ## How to log in
+
+    1. Open **POST /api/auth/login** below, click **Try it out**, enter your email and password, and click **Execute**.
+    2. Copy the `token` value from the response (`data.token`).
+    3. Click the **Authorize** button at the top of this page and paste the token (without the word "Bearer").
+    4. Now all routes with a lock icon will send `Authorization: Bearer <token>` for you.
+
+    Tokens expire after 24 hours by default (the `JWT_TTL` setting). Without a valid token,
+    protected routes answer `401 Unauthorized`.
+
+    ## Roles
+
+    - **admin** - can use every route, including user management (`/api/admin/users`).
+    - **editor** - can use every admin route except user management. Calling a users route
+      as an editor answers `403 Forbidden`.
+
+    Routes under `/api/public/...` and `/api/health` need no login.
+
+    ## Good to know
+
+    - On update (PUT) routes you only need to send the fields you want to change. A field that is
+      missing (or `null`) keeps its current value, unless the route says otherwise.
+    - `is_active` is `1` (shown on the website) or `0` (hidden). In request bodies, `0`, `"0"`, `false`
+      and `""` all mean hidden; anything else means shown.
+    - Delete routes do not check whether the row exists; they always answer `ok: true`.
+    - Image and file paths look like `/uploads/projects/park-hyatt-k3f9a2.jpg`. Upload the file first
+      with **POST /api/admin/upload**, then save the returned `path` in the item.
+
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+
+tags:
+  - name: Auth
+    description: Log in and check who is logged in.
+  - name: Public
+    description: Read-only data for the public website. No login needed.
+  - name: Contact
+    description: The public contact form.
+  - name: Users
+    description: Admin panel user accounts (admin role only).
+  - name: Categories
+    description: Top level of the product catalog.
+  - name: Subcategories
+    description: Second level of the product catalog (inside a category).
+  - name: Sub-subcategories
+    description: Catalog items inside a subcategory. An item is a "group" (has child items) or a "product" (has advantages and features).
+  - name: Products
+    description: Product pages inside a subcategory, with a gallery of images.
+  - name: Projects
+    description: Reference projects (for example hotels and offices).
+  - name: Publications
+    description: News and articles.
+  - name: Downloads
+    description: Catalogues and manuals in the download center.
+  - name: Service page
+    description: The single Services page.
+  - name: Settings
+    description: Site-wide key/value settings.
+  - name: Banners
+    description: Homepage hero banners.
+  - name: Nav menus
+    description: Links in the header and footer menus.
+  - name: Upload
+    description: Upload images and documents.
+  - name: Health
+    description: Check that the server is running.
+
+paths:
+  # ---------------------------------------------------------------------------
+  # Auth
+  # ---------------------------------------------------------------------------
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: Log in
+      description: Checks email and password and returns a login token (JWT) plus the user.
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginInput'
+      responses:
+        '200':
+          description: Logged in.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/OkEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/LoginResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: Wrong email or password.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                ok: false
+                error: Invalid credentials
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/auth/me:
+    get:
+      tags: [Auth]
+      summary: Get the logged in user
+      description: Returns the user stored inside the token (no database lookup).
+      operationId: getMe
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The logged in user.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/OkEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AuthUser'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ---------------------------------------------------------------------------
+  # Public (website)
+  # ---------------------------------------------------------------------------
+  /api/public/homepage:
+    get:
+      tags: [Public]
+      summary: Homepage data
+      description: Active banners, up to 8 categories, up to 20 projects, story milestones, partner brands and homepage settings.
+      operationId: getPublicHomepage
+      responses:
+        '200':
+          description: Everything the homepage needs.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/OkEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PublicHomepage'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/public/categories:
+    get:
+      tags: [Public]
+      summary: List categories
+      description: Every active category with its active subcategories.
+      operationId: getPublicCategories
+      responses:
+        '200':
+          description: List of categories.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/OkEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PublicCategory'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/public/categories/{slug}:
+    get:
+      tags: [Public]
+      summary: Get one category
+      description: One active category by slug, with its active subcategories.
+      operationId: getPublicCategoryDetail
+      parameters:
+        - $ref: '#/components/parameters/Slug'
+      responses:
+        '200':
+          description: The category.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/OkEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PublicCategoryDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/public/subcategories/{catSlug}/{subSlug}:
+    get:
+      tags: [Public]
+      summary: Get one subcategory
+      description: One active subcategory with its top-level catalog items and its products.
+      operationId: getPublicSubcategoryDetail
+      parameters:
+        - $ref: '#/components/parameters/CatSlug'
+        - $ref: '#/components/parameters/SubSlug'
+      responses:
+        '200':
+          description: The subcategory.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/OkEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PublicSubcategoryDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/public/subsubcategories/{catSlug}/{subSlug}/{subSubSlug}:
+    get:
+      tags: [Public]
+      summary: Get one top-level catalog item
+      description: A catalog item directly inside a subcategory. Groups list their children; products have advantages and features.
+      operationId: getPublicSubSubcategoryDetail
+      parameters:
+        - $ref: '#/components/parameters/CatSlug'
+        - $ref: '#/components/parameters/SubSlug'
+        - $ref: '#/components/parameters/SubSubSlug'
+      responses:
+        '200':
+          description: The catalog item.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/OkEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PublicSubSubcategoryDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/public/subsubcategories/{catSlug}/{subSlug}/{subSubSlug}/{leafSlug}:
+    get:
+      tags: [Public]
+      summary: Get one nested catalog item
+      description: A catalog item inside a group item (4th level), with advantages and features.
+      operationId: getPublicSubSubProductDetail
+      parameters:
+        - $ref: '#/components/parameters/CatSlug'
+        - $ref: '#/components/parameters/SubSlug'
+        - $ref: '#/components/parameters/SubSubSlug'
+        - $ref: '#/components/parameters/LeafSlug'
+      responses:
+        '200':
+          description: The nested catalog item.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/OkEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PublicSubSubProductDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/public/products/{catSlug}/{subSlug}/{prodSlug}:
+    get:
+      tags: [Public]
+      summary: Get one product
+      description: One active product with its gallery images.
+      operationId: getPublicProductDetail
+      parameters:
+        - $ref: '#/components/parameters/CatSlug'
+        - $ref: '#/components/parameters/SubSlug'
+        - $ref: '#/components/parameters/ProdSlug'
+      responses:
+        '200':
+          description: The product.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/OkEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PublicProductDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/public/projects:
+    get:
+      tags: [Public]
+      summary: List projects (paged)
+      description: Active projects, newest first.
+      operationId: getPublicProjects
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: One page of projects.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/OkEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PublicProjectPage'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/public/projects/{slug}:
+    get:
+      tags: [Public]
+      summary: Get one project
+      operationId: getPublicProjectDetail
+      parameters:
+        - $ref: '#/components/parameters/Slug'
+      responses:
+        '200':
+          description: The project (every column).
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/OkEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Project'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/public/publications:
+    get:
+      tags: [Public]
+      summary: List publications (paged)
+      description: Active publications, newest first.
+      operationId: getPublicPublications
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: One page of publications.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/OkEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PublicPublicationPage'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/public/publications/{slug}:
+    get:
+      tags: [Public]
+      summary: Get one publication
+      operationId: getPublicPublicationDetail
+      parameters:
+        - $ref: '#/components/parameters/Slug'
+      responses:
+        '200':
+          description: The publication (every column).
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/OkEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Publication'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/public/downloads:
+    get:
+      tags: [Public]
+      summary: List downloads
+      description: Every active download (catalogues and manuals).
+      operationId: getPublicDownloads
+      responses:
+        '200':
+          description: List of downloads.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/OkEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PublicDownload'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/public/service:
+    get:
+      tags: [Public]
+      summary: Get the Services page
+      description: Returns empty content when the page was never saved.
+      operationId: getPublicServicePage
+      responses:
+        '200':
+          description: The Services page content.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/OkEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PublicServicePage'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/public/settings:
+    get:
+      tags: [Public]
+      summary: Get public settings
+      description: Only the settings that are safe to show to visitors. Keys that are not set are left out.
+      operationId: getPublicSettings
+      responses:
+        '200':
+          description: Public settings as one object.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/OkEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PublicSettings'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/public/nav-menus:
+    get:
+      tags: [Public]
+      summary: Get menu links
+      description: Active menu links grouped by location (header, footer_explore, footer_resources).
+      operationId: getPublicNavMenus
+      responses:
+        '200':
+          description: Menu links grouped by location.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/OkEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PublicNavMenus'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  # ---------------------------------------------------------------------------
+  # Contact
+  # ---------------------------------------------------------------------------
+  /api/public/contact:
+    post:
+      tags: [Contact]
+      summary: Send the contact form
+      description: Emails the message to the site admin. If the hidden "website" field is filled in (a bot), it answers ok with data null but sends nothing.
+      operationId: submitContactForm
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactInput'
+      responses:
+        '200':
+          description: 'Message sent (data is `{ "sent": true }`), or ignored because the honeypot was filled (data is `null`).'
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/OkEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        nullable: true
+                        properties:
+                          sent:
+                            type: boolean
+                            example: true
+              example:
+                ok: true
+                data:
+                  sent: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '422':
+          description: A required field is missing, or the email is not valid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missingField:
+                  value:
+                    ok: false
+                    error: 'Missing field: email'
+                invalidEmail:
+                  value:
+                    ok: false
+                    error: Invalid email
+        '500':
+          description: The email could not be sent.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                ok: false
+                error: Failed to send message
+
+  # ---------------------------------------------------------------------------
+  # Users (admin only)
+  # ---------------------------------------------------------------------------
+  /api/admin/users:
+    get:
+      tags: [Users]
+      summary: List users
+      description: Every user, without password hashes. Admin only.
+      operationId: listUsers
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of users.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/OkEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags: [Users]
+      summary: Create a user
+      description: Admin only. The password is stored as a bcrypt hash.
+      operationId: createUser
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreateInput'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkId'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Another user already uses this email.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                ok: false
+                error: Email already exists
+        '422':
+          description: "A required field is missing, the role is not admin/editor, or the email is not valid."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                example1:
+                  value:
+                    ok: false
+                    error: "Missing field: email"
+                example2:
+                  value:
+                    ok: false
+                    error: "Invalid role"
+                example3:
+                  value:
+                    ok: false
+                    error: "Invalid email"
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/admin/users/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags: [Users]
+      summary: Update a user
+      description: "Admin only. Only the fields you send are changed. An empty password keeps the current one. Sending the user's own (unchanged) email is fine."
+      operationId: updateUser
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdateInput'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkId'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: "The email already belongs to another user."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                ok: false
+                error: "Email already exists"
+        '422':
+          description: "Nothing to update, the role is not admin/editor, or the email is not valid."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                example1:
+                  value:
+                    ok: false
+                    error: "Nothing to update"
+                example2:
+                  value:
+                    ok: false
+                    error: "Invalid role"
+                example3:
+                  value:
+                    ok: false
+                    error: "Invalid email"
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      tags: [Users]
+      summary: Delete a user
+      description: Admin only. You cannot delete your own account.
+      operationId: deleteUser
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/OkId'
+        '400':
+          description: You tried to delete your own account.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                ok: false
+                error: Cannot delete yourself
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: "There is no row with this id."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                ok: false
+                error: "Not found"
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  # ---------------------------------------------------------------------------
+  # Categories
+  # ---------------------------------------------------------------------------
+  /api/admin/categories:
+    get:
+      tags: [Categories]
+      summary: List categories
+      description: Every category (active and hidden), sorted by sort_order.
+      operationId: listCategories
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of categories.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/OkEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Category'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags: [Categories]
+      summary: Create a category
+      description: When slug is not sent it is made from the name. A number is added when the slug is already used.
+      operationId: createCategory
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/CategoryInput'
+                - required: [name]
+      responses:
+        '200':
+          $ref: '#/components/responses/OkIdSlug'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/admin/categories/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags: [Categories]
+      summary: Update a category
+      description: Fields that are not sent keep their current value.
+      operationId: updateCategory
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryInput'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkId'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      tags: [Categories]
+      summary: Delete a category
+      description: Also deletes its subcategories, catalog items and products (database cascade).
+      operationId: deleteCategory
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/OkNull'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: "There is no row with this id."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                ok: false
+                error: "Not found"
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  # ---------------------------------------------------------------------------
+  # Subcategories
+  # ---------------------------------------------------------------------------
+  /api/admin/subcategories:
+    get:
+      tags: [Subcategories]
+      summary: List subcategories
+      description: Every subcategory with its category name. Use category_id to show only one category.
+      operationId: listSubcategories
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: category_id
+          in: query
+          required: false
+          description: Only return subcategories of this category. Leave empty (or 0) for all.
+          schema:
+            type: integer
+            example: 3
+      responses:
+        '200':
+          description: List of subcategories.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/OkEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/SubcategoryListItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags: [Subcategories]
+      summary: Create a subcategory
+      description: The slug only has to be unique inside the same category.
+      operationId: createSubcategory
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/SubcategoryInput'
+                - required: [name, category_id]
+      responses:
+        '200':
+          $ref: '#/components/responses/OkIdSlug'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          description: "A required field is missing, or the category does not exist."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                example1:
+                  value:
+                    ok: false
+                    error: "Missing field: category_id"
+                example2:
+                  value:
+                    ok: false
+                    error: "Category not found"
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/admin/subcategories/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags: [Subcategories]
+      summary: Update a subcategory
+      description: Fields that are not sent keep their current value.
+      operationId: updateSubcategory
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubcategoryInput'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkId'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: "The category_id that was sent does not exist."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                ok: false
+                error: "Category not found"
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      tags: [Subcategories]
+      summary: Delete a subcategory
+      description: Also deletes its catalog items and products (database cascade).
+      operationId: deleteSubcategory
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/OkNull'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: "There is no row with this id."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                ok: false
+                error: "Not found"
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  # ---------------------------------------------------------------------------
+  # Sub-subcategories (catalog items)
+  # ---------------------------------------------------------------------------
+  /api/admin/subsubcategories:
+    get:
+      tags: [Sub-subcategories]
+      summary: List catalog items
+      description: Every catalog item with its subcategory, category and parent names. Each group is directly followed by its children.
+      operationId: listSubSubcategories
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: subcategory_id
+          in: query
+          required: false
+          description: Only return items of this subcategory. Leave empty (or 0) for all.
+          schema:
+            type: integer
+            example: 5
+      responses:
+        '200':
+          description: List of catalog items.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/OkEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/SubSubcategoryListItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags: [Sub-subcategories]
+      summary: Create a catalog item
+      description: Advantages and features are saved when they are sent as arrays.
+      operationId: createSubSubcategory
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/SubSubcategoryInput'
+                - required: [name, subcategory_id]
+      responses:
+        '200':
+          $ref: '#/components/responses/OkIdSlug'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          description: "A required field is missing, the subcategory does not exist, or parent_id is not a group in the same subcategory."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                example1:
+                  value:
+                    ok: false
+                    error: "Missing field: subcategory_id"
+                example2:
+                  value:
+                    ok: false
+                    error: "Subcategory not found"
+                example3:
+                  value:
+                    ok: false
+                    error: "Parent not found"
+                example4:
+                  value:
+                    ok: false
+                    error: "Parent must be a group"
+                example5:
+                  value:
+                    ok: false
+                    error: "Parent must be in the same subcategory"
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/admin/subsubcategories/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Sub-subcategories]
+      summary: Get one catalog item
+      description: The item with its advantages and features (feature images as an array).
+      operationId: getSubSubcategory
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The catalog item.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/OkEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SubSubcategoryDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    put:
+      tags: [Sub-subcategories]
+      summary: Update a catalog item
+      description: Fields that are not sent keep their current value. Sending "advantages" or "features" replaces the whole list. Send parent_id null to move the item to the top level.
+      operationId: updateSubSubcategory
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubSubcategoryInput'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkId'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: "The subcategory does not exist, or parent_id is not a group in the same subcategory (or is the item itself). The parent is only checked when parent_id or subcategory_id is sent."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                example1:
+                  value:
+                    ok: false
+                    error: "Subcategory not found"
+                example2:
+                  value:
+                    ok: false
+                    error: "Parent not found"
+                example3:
+                  value:
+                    ok: false
+                    error: "Parent must be a group"
+                example4:
+                  value:
+                    ok: false
+                    error: "Parent must be in the same subcategory"
+                example5:
+                  value:
+                    ok: false
+                    error: "An item cannot be its own parent"
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      tags: [Sub-subcategories]
+      summary: Delete a catalog item
+      description: Also deletes its child items, advantages and features (database cascade).
+      operationId: deleteSubSubcategory
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/OkNull'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: "There is no row with this id."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                ok: false
+                error: "Not found"
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  # ---------------------------------------------------------------------------
+  # Products
+  # ---------------------------------------------------------------------------
+  /api/admin/products:
+    get:
+      tags: [Products]
+      summary: List products
+      description: Every product with its subcategory and category names.
+      operationId: listProducts
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: subcategory_id
+          in: query
+          required: false
+          description: Only return products of this subcategory. Leave empty (or 0) for all.
+          schema:
+            type: integer
+            example: 5
+      responses:
+        '200':
+          description: List of products.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/OkEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ProductListItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags: [Products]
+      summary: Create a product
+      description: The slug only has to be unique inside the same subcategory. "images" is the gallery, in order.
+      operationId: createProduct
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/ProductInput'
+                - required: [name, subcategory_id]
+      responses:
+        '200':
+          $ref: '#/components/responses/OkIdSlug'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          description: "A required field is missing, or the subcategory does not exist."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                example1:
+                  value:
+                    ok: false
+                    error: "Missing field: subcategory_id"
+                example2:
+                  value:
+                    ok: false
+                    error: "Subcategory not found"
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/admin/products/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Products]
+      summary: Get one product
+      description: The product with its gallery images.
+      operationId: getProduct
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The product.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/OkEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ProductDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    put:
+      tags: [Products]
+      summary: Update a product
+      description: Fields that are not sent keep their current value. Sending "images" replaces the whole gallery.
+      operationId: updateProduct
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInput'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkId'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: "The subcategory_id that was sent does not exist."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                ok: false
+                error: "Subcategory not found"
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      tags: [Products]
+      summary: Delete a product
+      description: Also deletes its gallery images (database cascade).
+      operationId: deleteProduct
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/OkNull'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: "There is no row with this id."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                ok: false
+                error: "Not found"
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  # ---------------------------------------------------------------------------
+  # Projects
+  # ---------------------------------------------------------------------------
+  /api/admin/projects:
+    get:
+      tags: [Projects]
+      summary: List projects
+      description: Every project (active and hidden), newest first.
+      operationId: listProjects
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of projects.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/OkEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Project'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags: [Projects]
+      summary: Create a project
+      description: When published_at is not sent, today's date is used.
+      operationId: createProject
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/ProjectInput'
+                - required: [title]
+      responses:
+        '200':
+          $ref: '#/components/responses/OkIdSlug'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/admin/projects/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags: [Projects]
+      summary: Update a project
+      description: Fields that are not sent keep their current value. category, location, products, owner, architect and contractor can be cleared by sending null.
+      operationId: updateProject
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectInput'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkId'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      tags: [Projects]
+      summary: Delete a project
+      operationId: deleteProject
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/OkNull'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: "There is no row with this id."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                ok: false
+                error: "Not found"
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  # ---------------------------------------------------------------------------
+  # Publications
+  # ---------------------------------------------------------------------------
+  /api/admin/publications:
+    get:
+      tags: [Publications]
+      summary: List publications
+      description: Every publication (active and hidden), newest first.
+      operationId: listPublications
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of publications.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/OkEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Publication'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags: [Publications]
+      summary: Create a publication
+      description: When published_at is not sent, today's date is used.
+      operationId: createPublication
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/PublicationInput'
+                - required: [title]
+      responses:
+        '200':
+          $ref: '#/components/responses/OkIdSlug'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/admin/publications/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags: [Publications]
+      summary: Update a publication
+      description: Fields that are not sent keep their current value.
+      operationId: updatePublication
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublicationInput'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkId'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      tags: [Publications]
+      summary: Delete a publication
+      operationId: deletePublication
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/OkNull'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: "There is no row with this id."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                ok: false
+                error: "Not found"
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  # ---------------------------------------------------------------------------
+  # Downloads
+  # ---------------------------------------------------------------------------
+  /api/admin/downloads:
+    get:
+      tags: [Downloads]
+      summary: List downloads
+      description: Every download (active and hidden), sorted by sort_order.
+      operationId: listDownloads
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of downloads.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/OkEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Download'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags: [Downloads]
+      summary: Create a download
+      description: An unknown section is saved as "catalogues".
+      operationId: createDownload
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/DownloadInput'
+                - required: [title]
+      responses:
+        '200':
+          $ref: '#/components/responses/OkId'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/admin/downloads/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags: [Downloads]
+      summary: Update a download
+      description: Fields that are not sent keep their current value.
+      operationId: updateDownload
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DownloadInput'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkId'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      tags: [Downloads]
+      summary: Delete a download
+      description: Deletes the database row only; the uploaded file stays on disk.
+      operationId: deleteDownload
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/OkNull'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: "There is no row with this id."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                ok: false
+                error: "Not found"
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  # ---------------------------------------------------------------------------
+  # Service page
+  # ---------------------------------------------------------------------------
+  /api/admin/service:
+    get:
+      tags: [Service page]
+      summary: Get the Services page
+      description: Returns empty content (id 1) when the page was never saved.
+      operationId: getServicePage
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The Services page.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/OkEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ServicePage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    put:
+      tags: [Service page]
+      summary: Save the Services page
+      description: "Fields that are not sent keep their current value. Send hero_image: null to remove the image."
+      operationId: updateServicePage
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServicePageInput'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkNull'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  # ---------------------------------------------------------------------------
+  # Settings
+  # ---------------------------------------------------------------------------
+  /api/admin/settings:
+    get:
+      tags: [Settings]
+      summary: Get all settings
+      description: Every setting as one object of key to value.
+      operationId: getSettings
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: All settings.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/OkEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Settings'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    put:
+      tags: [Settings]
+      summary: Save settings
+      description: "Every key in the body is created or updated. Keys you do not send are not changed. Numbers and true are saved as text (\"12\", \"1\"), false as \"\", and null as an empty value (null)."
+      operationId: updateSettings
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettingsInput'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkNull'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  # ---------------------------------------------------------------------------
+  # Banners
+  # ---------------------------------------------------------------------------
+  /api/admin/banners:
+    get:
+      tags: [Banners]
+      summary: List banners
+      description: Every homepage banner (active and hidden), sorted by sort_order.
+      operationId: listBanners
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of banners.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/OkEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Banner'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags: [Banners]
+      summary: Create a banner
+      operationId: createBanner
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/BannerInput'
+                - required: [image_path]
+      responses:
+        '200':
+          $ref: '#/components/responses/OkId'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/admin/banners/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags: [Banners]
+      summary: Update a banner
+      description: Fields that are not sent keep their current value.
+      operationId: updateBanner
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BannerInput'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkId'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      tags: [Banners]
+      summary: Delete a banner
+      operationId: deleteBanner
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/OkNull'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: "There is no row with this id."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                ok: false
+                error: "Not found"
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  # ---------------------------------------------------------------------------
+  # Nav menus
+  # ---------------------------------------------------------------------------
+  /api/admin/nav-menus:
+    get:
+      tags: [Nav menus]
+      summary: List menu links
+      description: Every menu link (active and hidden). Use location to show only one menu.
+      operationId: listNavMenus
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: location
+          in: query
+          required: false
+          description: Only return links of this menu. Leave empty for all.
+          schema:
+            type: string
+            enum: [header, footer_explore, footer_resources]
+      responses:
+        '200':
+          description: List of menu links.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/OkEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/NavMenu'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags: [Nav menus]
+      summary: Create a menu link
+      operationId: createNavMenu
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/NavMenuInput'
+                - required: [location, label, url]
+      responses:
+        '200':
+          $ref: '#/components/responses/OkId'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          description: A required field is missing, or the location is not allowed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missingField:
+                  value:
+                    ok: false
+                    error: 'Missing field: url'
+                invalidLocation:
+                  value:
+                    ok: false
+                    error: Invalid location
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/admin/nav-menus/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags: [Nav menus]
+      summary: Update a menu link
+      description: Fields that are not sent keep their current value.
+      operationId: updateNavMenu
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NavMenuInput'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkId'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: "location is not header, footer_explore or footer_resources."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                ok: false
+                error: "Invalid location"
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      tags: [Nav menus]
+      summary: Delete a menu link
+      operationId: deleteNavMenu
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/OkNull'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: "There is no row with this id."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                ok: false
+                error: "Not found"
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  # ---------------------------------------------------------------------------
+  # Upload
+  # ---------------------------------------------------------------------------
+  /api/admin/upload:
+    post:
+      tags: [Upload]
+      summary: Upload a file
+      description: Saves the file in /uploads/<folder>/ and returns its public path. Large JPEG and PNG images are resized (longest side max 1600px) and compressed.
+      operationId: uploadFile
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: kind
+          in: query
+          required: false
+          description: |
+            Which file types are allowed.
+            - `image`: jpg, jpeg, png, webp, gif, svg
+            - `file`: pdf, doc, docx, xls, xlsx, ppt, pptx, zip, rar, txt
+            - `any` (default): both lists. Any other value also behaves like `any`.
+          schema:
+            type: string
+            enum: [image, file, any]
+            default: any
+        - name: folder
+          in: query
+          required: false
+          description: The folder inside /uploads to save into. Empty means "misc".
+          schema:
+            type: string
+            default: misc
+            enum:
+              - site/logo
+              - site/mega-menu
+              - site/home
+              - site/services
+              - site/download-center
+              - banners
+              - brands
+              - catalog/categories
+              - catalog/subcategories
+              - catalog/items
+              - catalog/features
+              - products
+              - projects
+              - publications
+              - downloads/thumbnails
+              - downloads/files
+              - story
+              - content
+              - misc
+            example: projects
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: The file to upload (max 10 MB by default, setting UPLOAD_MAX_BYTES).
+      responses:
+        '200':
+          description: File saved.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/OkEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UploadResult'
+        '400':
+          description: The multipart form could not be read.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                ok: false
+                error: 'Upload error: Unexpected end of form'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413':
+          description: The file is bigger than the size limit.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                ok: false
+                error: File too large
+        '415':
+          description: The file extension is not allowed for this kind.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                ok: false
+                error: File type .exe not allowed
+        '422':
+          description: The folder is not allowed, or no file was sent in the "file" field.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidFolder:
+                  value:
+                    ok: false
+                    error: 'Invalid upload folder: secret'
+                noFile:
+                  value:
+                    ok: false
+                    error: No file uploaded (file)
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  # ---------------------------------------------------------------------------
+  # Health
+  # ---------------------------------------------------------------------------
+  /api/health:
+    get:
+      tags: [Health]
+      summary: Health check
+      description: Answers ok when the server is running (does not check the database).
+      operationId: healthCheck
+      responses:
+        '200':
+          description: The server is running.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/OkEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          status:
+                            type: string
+                            example: ok
+              example:
+                ok: true
+                data:
+                  status: ok
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Paste the token from POST /api/auth/login (without the word "Bearer").
+
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      description: The row id.
+      schema:
+        type: integer
+        example: 12
+    Slug:
+      name: slug
+      in: path
+      required: true
+      description: The URL slug.
+      schema:
+        type: string
+        example: park-hyatt-jakarta
+    CatSlug:
+      name: catSlug
+      in: path
+      required: true
+      description: Slug of the category.
+      schema:
+        type: string
+        example: architectural-hardware
+    SubSlug:
+      name: subSlug
+      in: path
+      required: true
+      description: Slug of the subcategory.
+      schema:
+        type: string
+        example: door-closers
+    SubSubSlug:
+      name: subSubSlug
+      in: path
+      required: true
+      description: Slug of the top-level catalog item (sub-subcategory).
+      schema:
+        type: string
+        example: overhead-door-closers
+    LeafSlug:
+      name: leafSlug
+      in: path
+      required: true
+      description: Slug of the catalog item inside the group.
+      schema:
+        type: string
+        example: ts-93-g
+    ProdSlug:
+      name: prodSlug
+      in: path
+      required: true
+      description: Slug of the product.
+      schema:
+        type: string
+        example: dorma-ts-93
+    Page:
+      name: page
+      in: query
+      required: false
+      description: Page number, starting at 1. Values below 1 become 1.
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    Limit:
+      name: limit
+      in: query
+      required: false
+      description: Items per page. Values are kept between 1 and 50.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 50
+        default: 12
+
+  responses:
+    OkId:
+      description: Saved. Returns the id of the row.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/OkEnvelope'
+              - type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/IdResult'
+          example:
+            ok: true
+            data:
+              id: 12
+    OkIdSlug:
+      description: Created. Returns the new id and the final (unique) slug.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/OkEnvelope'
+              - type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/IdSlugResult'
+          example:
+            ok: true
+            data:
+              id: 12
+              slug: park-hyatt-jakarta
+    OkNull:
+      description: Done. data is always null.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/OkEnvelope'
+          example:
+            ok: true
+            data: null
+    BadRequest:
+      description: The request body is not valid JSON.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            ok: false
+            error: Invalid JSON body
+    Unauthorized:
+      description: No token, or the token is invalid or expired.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            ok: false
+            error: Unauthorized
+    Forbidden:
+      description: You are logged in, but your role is not admin.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            ok: false
+            error: Forbidden
+    NotFound:
+      description: Nothing was found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            ok: false
+            error: Not found
+    ValidationError:
+      description: A required field is missing or empty.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            ok: false
+            error: 'Missing field: title'
+    ServerError:
+      description: Something went wrong on the server, or the database could not be reached.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            serverError:
+              value:
+                ok: false
+                error: Server error
+            databaseDown:
+              value:
+                ok: false
+                error: Database connection failed
+
+  schemas:
+    # -------------------------------------------------------------------------
+    # Envelope
+    # -------------------------------------------------------------------------
+    OkEnvelope:
+      type: object
+      description: Every successful response. "data" depends on the route (object, list or null).
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+          example: true
+        data:
+          nullable: true
+          description: The result of the request.
+    ErrorResponse:
+      type: object
+      description: Every error response.
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          enum: [false]
+          example: false
+        error:
+          type: string
+          example: 'Missing field: title'
+    IdResult:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: integer
+          example: 12
+    IdSlugResult:
+      type: object
+      required: [id, slug]
+      properties:
+        id:
+          type: integer
+          example: 12
+        slug:
+          type: string
+          example: park-hyatt-jakarta
+    UploadResult:
+      type: object
+      required: [path]
+      properties:
+        path:
+          type: string
+          example: /uploads/projects/park-hyatt-k3f9a2.jpg
+
+    # -------------------------------------------------------------------------
+    # Shared small types
+    # -------------------------------------------------------------------------
+    ActiveFlag:
+      type: integer
+      enum: [0, 1]
+      description: 1 = shown on the website, 0 = hidden.
+      example: 1
+    DateTimeText:
+      type: string
+      description: Date and time as plain text (YYYY-MM-DD HH:MM:SS).
+      example: '2026-10-08 13:45:00'
+
+    # -------------------------------------------------------------------------
+    # Auth and users
+    # -------------------------------------------------------------------------
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: admin@example.com
+        password:
+          type: string
+          format: password
+          example: your-password
+    AuthUser:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Site Admin
+        email:
+          type: string
+          format: email
+          example: admin@example.com
+        role:
+          type: string
+          enum: [admin, editor]
+          example: admin
+    LoginResult:
+      type: object
+      properties:
+        token:
+          type: string
+          description: The JWT. Send it as "Authorization Bearer <token>".
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjF9.signature
+        user:
+          $ref: '#/components/schemas/AuthUser'
+    User:
+      type: object
+      description: A user account as listed by the admin API (the password hash is never returned).
+      properties:
+        id:
+          type: integer
+          example: 2
+        name:
+          type: string
+          example: Content Editor
+        email:
+          type: string
+          format: email
+          example: editor@example.com
+        role:
+          type: string
+          enum: [admin, editor]
+          example: editor
+        created_at:
+          $ref: '#/components/schemas/DateTimeText'
+    UserCreateInput:
+      type: object
+      required: [name, email, password, role]
+      properties:
+        name:
+          type: string
+          example: Content Editor
+        email:
+          type: string
+          format: email
+          example: editor@example.com
+        password:
+          type: string
+          format: password
+          example: a-strong-password
+        role:
+          type: string
+          enum: [admin, editor]
+          example: editor
+    UserUpdateInput:
+      type: object
+      description: Send at least one field. An empty password keeps the current password.
+      properties:
+        name:
+          type: string
+          example: Content Editor
+        email:
+          type: string
+          format: email
+          example: editor@example.com
+        password:
+          type: string
+          format: password
+          example: a-new-password
+        role:
+          type: string
+          enum: [admin, editor]
+          example: editor
+
+    # -------------------------------------------------------------------------
+    # Contact
+    # -------------------------------------------------------------------------
+    ContactInput:
+      type: object
+      required: [name, email, subject, message]
+      properties:
+        name:
+          type: string
+          example: Budi Santoso
+        email:
+          type: string
+          format: email
+          example: budi@example.com
+        subject:
+          type: string
+          example: Question about door closers
+        message:
+          type: string
+          example: |-
+            Hello,
+            Do you have the TS 93 door closer in stock?
+        website:
+          type: string
+          description: Hidden anti-spam field. Real visitors leave it empty.
+          example: ''
+
+    # -------------------------------------------------------------------------
+    # Categories
+    # -------------------------------------------------------------------------
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 3
+        name:
+          type: string
+          example: Architectural Hardware
+        slug:
+          type: string
+          example: architectural-hardware
+        description:
+          type: string
+          nullable: true
+          example: Door closers, locks and handles for commercial buildings.
+        image_path:
+          type: string
+          nullable: true
+          example: /uploads/catalog/categories/architectural-hardware-a1b2c3.jpg
+        sort_order:
+          type: integer
+          example: 1
+        is_active:
+          $ref: '#/components/schemas/ActiveFlag'
+        created_at:
+          $ref: '#/components/schemas/DateTimeText'
+        updated_at:
+          $ref: '#/components/schemas/DateTimeText'
+    CategoryInput:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Architectural Hardware
+        slug:
+          type: string
+          description: Optional. Made from the name when empty; a number is added when already used.
+          example: architectural-hardware
+        description:
+          type: string
+          nullable: true
+          example: Door closers, locks and handles for commercial buildings.
+        image_path:
+          type: string
+          nullable: true
+          example: /uploads/catalog/categories/architectural-hardware-a1b2c3.jpg
+        sort_order:
+          type: integer
+          example: 1
+        is_active:
+          $ref: '#/components/schemas/ActiveFlag'
+
+    # -------------------------------------------------------------------------
+    # Subcategories
+    # -------------------------------------------------------------------------
+    Subcategory:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 5
+        category_id:
+          type: integer
+          example: 3
+        name:
+          type: string
+          example: Door Closers
+        subtitle:
+          type: string
+          nullable: true
+          example: Overhead and floor springs
+        slug:
+          type: string
+          example: door-closers
+        description:
+          type: string
+          nullable: true
+          example: Reliable door closers for every door size.
+        image_path:
+          type: string
+          nullable: true
+          example: /uploads/catalog/subcategories/door-closers-d4e5f6.jpg
+        sort_order:
+          type: integer
+          example: 1
+        is_active:
+          $ref: '#/components/schemas/ActiveFlag'
+        created_at:
+          $ref: '#/components/schemas/DateTimeText'
+        updated_at:
+          $ref: '#/components/schemas/DateTimeText'
+    SubcategoryListItem:
+      allOf:
+        - $ref: '#/components/schemas/Subcategory'
+        - type: object
+          properties:
+            category_name:
+              type: string
+              example: Architectural Hardware
+    SubcategoryInput:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Door Closers
+        subtitle:
+          type: string
+          nullable: true
+          description: Short line shown under the title on the subcategory page.
+          example: Reliable closing for every door
+        category_id:
+          type: integer
+          example: 3
+        slug:
+          type: string
+          description: Optional. Made from the name when empty; must be unique inside the category.
+          example: door-closers
+        description:
+          type: string
+          nullable: true
+          example: Reliable door closers for every door size.
+        image_path:
+          type: string
+          nullable: true
+          example: /uploads/catalog/subcategories/door-closers-d4e5f6.jpg
+        sort_order:
+          type: integer
+          example: 1
+        is_active:
+          $ref: '#/components/schemas/ActiveFlag'
+
+    # -------------------------------------------------------------------------
+    # Sub-subcategories (catalog items)
+    # -------------------------------------------------------------------------
+    SubSubcategory:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 21
+        subcategory_id:
+          type: integer
+          example: 5
+        parent_id:
+          type: integer
+          nullable: true
+          description: The group item this item belongs to, or null for a top-level item.
+          example: null
+        type:
+          type: string
+          enum: [group, product]
+          example: product
+        name:
+          type: string
+          example: Overhead Door Closers
+        slug:
+          type: string
+          example: overhead-door-closers
+        description:
+          type: string
+          nullable: true
+          example: Cam-action door closers for heavy doors.
+        image_path:
+          type: string
+          nullable: true
+          example: /uploads/catalog/items/overhead-door-closer-7a8b9c.jpg
+        brand_logo:
+          type: string
+          nullable: true
+          example: /uploads/brands/dorma-logo-112233.png
+        sort_order:
+          type: integer
+          example: 1
+        is_active:
+          $ref: '#/components/schemas/ActiveFlag'
+        created_at:
+          $ref: '#/components/schemas/DateTimeText'
+    SubSubcategoryListItem:
+      allOf:
+        - $ref: '#/components/schemas/SubSubcategory'
+        - type: object
+          properties:
+            subcategory_name:
+              type: string
+              example: Door Closers
+            category_name:
+              type: string
+              example: Architectural Hardware
+            parent_name:
+              type: string
+              nullable: true
+              example: null
+    Advantage:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 4
+        label:
+          type: string
+          example: Adjustable closing speed
+    Feature:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 9
+        title:
+          type: string
+          example: Hold-open arm
+        image_path:
+          type: string
+          nullable: true
+          description: The first image (kept for older data).
+          example: /uploads/catalog/features/hold-open-arm-445566.jpg
+        images:
+          type: array
+          description: All images of the feature (a carousel when there is more than one).
+          items:
+            type: string
+          example:
+            - /uploads/catalog/features/hold-open-arm-445566.jpg
+            - /uploads/catalog/features/hold-open-arm-detail-778899.jpg
+        description:
+          type: string
+          nullable: true
+          example: Keeps the door open at any angle up to 150 degrees.
+    SubSubcategoryDetail:
+      allOf:
+        - $ref: '#/components/schemas/SubSubcategory'
+        - type: object
+          properties:
+            advantages:
+              type: array
+              items:
+                $ref: '#/components/schemas/Advantage'
+            features:
+              type: array
+              items:
+                $ref: '#/components/schemas/Feature'
+    FeatureInput:
+      type: object
+      required: [title]
+      description: A feature without a title is skipped.
+      properties:
+        title:
+          type: string
+          example: Hold-open arm
+        images:
+          type: array
+          items:
+            type: string
+          example:
+            - /uploads/catalog/features/hold-open-arm-445566.jpg
+        image_path:
+          type: string
+          description: A single image. Only used when "images" is not sent.
+          example: /uploads/catalog/features/hold-open-arm-445566.jpg
+        description:
+          type: string
+          nullable: true
+          example: Keeps the door open at any angle up to 150 degrees.
+    SubSubcategoryInput:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Overhead Door Closers
+        subcategory_id:
+          type: integer
+          example: 5
+        parent_id:
+          type: integer
+          nullable: true
+          description: The group item to put this item in. Empty or null = top level.
+          example: null
+        type:
+          type: string
+          enum: [group, product]
+          default: product
+          description: Any other value is saved as "product".
+        slug:
+          type: string
+          description: Optional. Made from the name when empty; must be unique inside the subcategory.
+          example: overhead-door-closers
+        description:
+          type: string
+          nullable: true
+          example: Cam-action door closers for heavy doors.
+        image_path:
+          type: string
+          nullable: true
+          example: /uploads/catalog/items/overhead-door-closer-7a8b9c.jpg
+        brand_logo:
+          type: string
+          nullable: true
+          example: /uploads/brands/dorma-logo-112233.png
+        sort_order:
+          type: integer
+          example: 1
+        is_active:
+          $ref: '#/components/schemas/ActiveFlag'
+        advantages:
+          type: array
+          description: When sent, replaces all advantages. Empty labels are skipped.
+          items:
+            type: string
+          example:
+            - Adjustable closing speed
+            - Fire rated
+        features:
+          type: array
+          description: When sent, replaces all features.
+          items:
+            $ref: '#/components/schemas/FeatureInput'
+
+    # -------------------------------------------------------------------------
+    # Products
+    # -------------------------------------------------------------------------
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 7
+        subcategory_id:
+          type: integer
+          example: 5
+        name:
+          type: string
+          example: DORMA TS 93
+        slug:
+          type: string
+          example: dorma-ts-93
+        short_desc:
+          type: string
+          nullable: true
+          example: Cam-action door closer with slide rail.
+        content_html:
+          type: string
+          nullable: true
+          example: <p>The TS 93 combines design and comfort.</p>
+        cover_image:
+          type: string
+          nullable: true
+          example: /uploads/products/dorma-ts-93-aabbcc.jpg
+        sort_order:
+          type: integer
+          example: 1
+        is_active:
+          $ref: '#/components/schemas/ActiveFlag'
+        created_at:
+          $ref: '#/components/schemas/DateTimeText'
+        updated_at:
+          $ref: '#/components/schemas/DateTimeText'
+    ProductListItem:
+      allOf:
+        - $ref: '#/components/schemas/Product'
+        - type: object
+          properties:
+            subcategory_name:
+              type: string
+              example: Door Closers
+            category_name:
+              type: string
+              example: Architectural Hardware
+    ProductImage:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 31
+        product_id:
+          type: integer
+          example: 7
+        image_path:
+          type: string
+          example: /uploads/products/dorma-ts-93-side-ddeeff.jpg
+        sort_order:
+          type: integer
+          example: 0
+    ProductDetail:
+      allOf:
+        - $ref: '#/components/schemas/Product'
+        - type: object
+          properties:
+            images:
+              type: array
+              items:
+                $ref: '#/components/schemas/ProductImage'
+    ProductInput:
+      type: object
+      properties:
+        name:
+          type: string
+          example: DORMA TS 93
+        subcategory_id:
+          type: integer
+          example: 5
+        slug:
+          type: string
+          description: Optional. Made from the name when empty; must be unique inside the subcategory.
+          example: dorma-ts-93
+        short_desc:
+          type: string
+          nullable: true
+          example: Cam-action door closer with slide rail.
+        content_html:
+          type: string
+          nullable: true
+          example: <p>The TS 93 combines design and comfort.</p>
+        cover_image:
+          type: string
+          nullable: true
+          example: /uploads/products/dorma-ts-93-aabbcc.jpg
+        sort_order:
+          type: integer
+          example: 1
+        is_active:
+          $ref: '#/components/schemas/ActiveFlag'
+        images:
+          type: array
+          description: Gallery image paths, in order. On update, sending this replaces the whole gallery.
+          items:
+            type: string
+          example:
+            - /uploads/products/dorma-ts-93-side-ddeeff.jpg
+            - /uploads/products/dorma-ts-93-detail-001122.jpg
+
+    # -------------------------------------------------------------------------
+    # Projects
+    # -------------------------------------------------------------------------
+    Project:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 12
+        title:
+          type: string
+          example: Park Hyatt Jakarta
+        category:
+          type: string
+          nullable: true
+          example: Hospitality
+        location:
+          type: string
+          nullable: true
+          example: Jakarta, Indonesia
+        products:
+          type: string
+          nullable: true
+          example: Door closers, lever handles
+        owner:
+          type: string
+          nullable: true
+          example: PT Example Properti
+        architect:
+          type: string
+          nullable: true
+          example: Example Architects
+        contractor:
+          type: string
+          nullable: true
+          example: PT Example Konstruksi
+        slug:
+          type: string
+          example: park-hyatt-jakarta
+        cover_image:
+          type: string
+          nullable: true
+          example: /uploads/projects/park-hyatt-k3f9a2.jpg
+        content_html:
+          type: string
+          nullable: true
+          example: <p>Door hardware for 220 guest rooms.</p>
+        published_at:
+          type: string
+          format: date
+          nullable: true
+          example: '2026-10-08'
+        is_active:
+          $ref: '#/components/schemas/ActiveFlag'
+        created_at:
+          $ref: '#/components/schemas/DateTimeText'
+        updated_at:
+          $ref: '#/components/schemas/DateTimeText'
+    ProjectInput:
+      type: object
+      properties:
+        title:
+          type: string
+          example: Park Hyatt Jakarta
+        slug:
+          type: string
+          description: Optional. Made from the title when empty; a number is added when already used.
+          example: park-hyatt-jakarta
+        category:
+          type: string
+          nullable: true
+          example: Hospitality
+        location:
+          type: string
+          nullable: true
+          example: Jakarta, Indonesia
+        products:
+          type: string
+          nullable: true
+          example: Door closers, lever handles
+        owner:
+          type: string
+          nullable: true
+          example: PT Example Properti
+        architect:
+          type: string
+          nullable: true
+          example: Example Architects
+        contractor:
+          type: string
+          nullable: true
+          example: PT Example Konstruksi
+        cover_image:
+          type: string
+          nullable: true
+          example: /uploads/projects/park-hyatt-k3f9a2.jpg
+        content_html:
+          type: string
+          nullable: true
+          example: <p>Door hardware for 220 guest rooms.</p>
+        published_at:
+          type: string
+          format: date
+          description: On create, today's date is used when empty.
+          example: '2026-10-08'
+        is_active:
+          $ref: '#/components/schemas/ActiveFlag'
+
+    # -------------------------------------------------------------------------
+    # Publications
+    # -------------------------------------------------------------------------
+    Publication:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 4
+        title:
+          type: string
+          example: New Showroom Opening in Surabaya
+        slug:
+          type: string
+          example: new-showroom-opening-in-surabaya
+        cover_image:
+          type: string
+          nullable: true
+          example: /uploads/publications/showroom-surabaya-334455.jpg
+        content_html:
+          type: string
+          nullable: true
+          example: <p>We are happy to open our new showroom.</p>
+        published_at:
+          type: string
+          format: date
+          nullable: true
+          example: '2026-10-08'
+        is_active:
+          $ref: '#/components/schemas/ActiveFlag'
+        created_at:
+          $ref: '#/components/schemas/DateTimeText'
+        updated_at:
+          $ref: '#/components/schemas/DateTimeText'
+    PublicationInput:
+      type: object
+      properties:
+        title:
+          type: string
+          example: New Showroom Opening in Surabaya
+        slug:
+          type: string
+          description: Optional. Made from the title when empty; a number is added when already used.
+          example: new-showroom-opening-in-surabaya
+        cover_image:
+          type: string
+          nullable: true
+          example: /uploads/publications/showroom-surabaya-334455.jpg
+        content_html:
+          type: string
+          nullable: true
+          example: <p>We are happy to open our new showroom.</p>
+        published_at:
+          type: string
+          format: date
+          description: On create, today's date is used when empty.
+          example: '2026-10-08'
+        is_active:
+          $ref: '#/components/schemas/ActiveFlag'
+
+    # -------------------------------------------------------------------------
+    # Downloads
+    # -------------------------------------------------------------------------
+    Download:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 6
+        title:
+          type: string
+          example: Door Hardware Catalogue 2026
+        section:
+          type: string
+          description: Which list the download appears in ("catalogues" or "manuals").
+          example: catalogues
+        description:
+          type: string
+          nullable: true
+          example: Full product range with technical drawings.
+        image_path:
+          type: string
+          nullable: true
+          example: /uploads/downloads/thumbnails/catalogue-2026-556677.jpg
+        file_path:
+          type: string
+          nullable: true
+          example: /uploads/downloads/files/catalogue-2026-889900.pdf
+        sort_order:
+          type: integer
+          example: 1
+        is_active:
+          $ref: '#/components/schemas/ActiveFlag'
+        created_at:
+          $ref: '#/components/schemas/DateTimeText'
+        updated_at:
+          $ref: '#/components/schemas/DateTimeText'
+    DownloadInput:
+      type: object
+      properties:
+        title:
+          type: string
+          example: Door Hardware Catalogue 2026
+        section:
+          type: string
+          enum: [catalogues, manuals]
+          default: catalogues
+          description: Any other value is saved as "catalogues".
+        description:
+          type: string
+          nullable: true
+          example: Full product range with technical drawings.
+        image_path:
+          type: string
+          nullable: true
+          example: /uploads/downloads/thumbnails/catalogue-2026-556677.jpg
+        file_path:
+          type: string
+          nullable: true
+          example: /uploads/downloads/files/catalogue-2026-889900.pdf
+        sort_order:
+          type: integer
+          example: 1
+        is_active:
+          $ref: '#/components/schemas/ActiveFlag'
+
+    # -------------------------------------------------------------------------
+    # Service page
+    # -------------------------------------------------------------------------
+    ServicePage:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        hero_image:
+          type: string
+          nullable: true
+          example: /uploads/site/services/services-hero-abcdef.jpg
+        content_html:
+          type: string
+          nullable: true
+          example: <h2>Installation and maintenance</h2><p>Our team installs every product we sell.</p>
+        updated_at:
+          allOf:
+            - $ref: '#/components/schemas/DateTimeText'
+          description: Not present when the page was never saved.
+    ServicePageInput:
+      type: object
+      properties:
+        content_html:
+          type: string
+          description: Saved as "" when not sent.
+          example: <h2>Installation and maintenance</h2><p>Our team installs every product we sell.</p>
+        hero_image:
+          type: string
+          nullable: true
+          description: Saved as null when not sent.
+          example: /uploads/site/services/services-hero-abcdef.jpg
+
+    # -------------------------------------------------------------------------
+    # Settings
+    # -------------------------------------------------------------------------
+    Settings:
+      type: object
+      description: Every setting, as key to value. Values are text (or null).
+      additionalProperties:
+        type: string
+        nullable: true
+      example:
+        site_name: Portfolio CMS
+        contact_email: info@example.com
+        contact_phone: '+62 21 555 0100'
+        homepage_partners_title: Our Partners
+    SettingsInput:
+      type: object
+      description: |
+        Any keys you want to create or update. Text is saved as is, numbers as text,
+        true as "1", false as "", and lists / objects / null as JSON text.
+      additionalProperties: true
+      example:
+        site_name: Portfolio CMS
+        contact_email: info@example.com
+        contact_phone: '+62 21 555 0100'
+
+    # -------------------------------------------------------------------------
+    # Banners
+    # -------------------------------------------------------------------------
+    Banner:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 2
+        image_path:
+          type: string
+          example: /uploads/banners/wilka-banner-81c0de.jpg
+        title:
+          type: string
+          nullable: true
+          example: Quality Door Hardware
+        subtitle:
+          type: string
+          nullable: true
+          example: Trusted by hotels and offices across Indonesia
+        link:
+          type: string
+          nullable: true
+          example: /projects
+        sort_order:
+          type: integer
+          example: 1
+        is_active:
+          $ref: '#/components/schemas/ActiveFlag'
+    BannerInput:
+      type: object
+      properties:
+        image_path:
+          type: string
+          example: /uploads/banners/wilka-banner-81c0de.jpg
+        title:
+          type: string
+          nullable: true
+          example: Quality Door Hardware
+        subtitle:
+          type: string
+          nullable: true
+          example: Trusted by hotels and offices across Indonesia
+        link:
+          type: string
+          nullable: true
+          example: /projects
+        sort_order:
+          type: integer
+          example: 1
+        is_active:
+          $ref: '#/components/schemas/ActiveFlag'
+
+    # -------------------------------------------------------------------------
+    # Nav menus
+    # -------------------------------------------------------------------------
+    NavMenu:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 8
+        location:
+          type: string
+          enum: [header, footer_explore, footer_resources]
+          example: header
+        label:
+          type: string
+          example: Projects
+        url:
+          type: string
+          example: /projects
+        sort_order:
+          type: integer
+          example: 2
+        is_active:
+          $ref: '#/components/schemas/ActiveFlag'
+        created_at:
+          $ref: '#/components/schemas/DateTimeText'
+        updated_at:
+          $ref: '#/components/schemas/DateTimeText'
+    NavMenuInput:
+      type: object
+      properties:
+        location:
+          type: string
+          enum: [header, footer_explore, footer_resources]
+          example: header
+        label:
+          type: string
+          example: Projects
+        url:
+          type: string
+          example: /projects
+        sort_order:
+          type: integer
+          example: 2
+        is_active:
+          $ref: '#/components/schemas/ActiveFlag'
+
+    # -------------------------------------------------------------------------
+    # Public (website) shapes
+    # -------------------------------------------------------------------------
+    PublicHomepage:
+      type: object
+      properties:
+        banners:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 2
+              image_path:
+                type: string
+                example: /uploads/banners/wilka-banner-81c0de.jpg
+              title:
+                type: string
+                nullable: true
+                example: Quality Door Hardware
+              subtitle:
+                type: string
+                nullable: true
+                example: Trusted by hotels and offices across Indonesia
+              link:
+                type: string
+                nullable: true
+                example: /projects
+        featuredCategories:
+          type: array
+          description: Up to 8 active categories.
+          items:
+            $ref: '#/components/schemas/PublicCategorySummary'
+        marqueeProjects:
+          type: array
+          description: Up to 20 active projects, newest first.
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 12
+              title:
+                type: string
+                example: Park Hyatt Jakarta
+              slug:
+                type: string
+                example: park-hyatt-jakarta
+              cover_image:
+                type: string
+                nullable: true
+                example: /uploads/projects/park-hyatt-k3f9a2.jpg
+        storyMilestones:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 1
+              year:
+                type: string
+                example: '1998'
+              content_text:
+                type: string
+                example: The company opens its first store in Jakarta.
+              image_url:
+                type: string
+                nullable: true
+                example: /uploads/story/first-store-123abc.jpg
+        partnerBrands:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 1
+              name:
+                type: string
+                example: Wilka
+              logo_path:
+                type: string
+                nullable: true
+                example: /uploads/brands/wilka-logo-a1b2c3.png
+        homepageSettings:
+          type: object
+          description: Homepage settings that are set (keys that are not set are left out).
+          properties:
+            homepage_services_headline:
+              type: string
+              nullable: true
+            homepage_services_subtext:
+              type: string
+              nullable: true
+            homepage_services_image:
+              type: string
+              nullable: true
+            homepage_marquee_headline:
+              type: string
+              nullable: true
+            homepage_about_logo:
+              type: string
+              nullable: true
+            homepage_about_text:
+              type: string
+              nullable: true
+            homepage_about_headline_prefix:
+              type: string
+              nullable: true
+            homepage_about_headline_words:
+              type: string
+              nullable: true
+            homepage_partners_title:
+              type: string
+              nullable: true
+              example: Our Partners
+    PublicCategorySummary:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 3
+        name:
+          type: string
+          example: Architectural Hardware
+        slug:
+          type: string
+          example: architectural-hardware
+        image_path:
+          type: string
+          nullable: true
+          example: /uploads/catalog/categories/architectural-hardware-a1b2c3.jpg
+        description:
+          type: string
+          nullable: true
+          example: Door closers, locks and handles for commercial buildings.
+    PublicLinkItem:
+      type: object
+      description: A short item used in lists (id, name, slug, image).
+      properties:
+        id:
+          type: integer
+          example: 5
+        name:
+          type: string
+          example: Door Closers
+        slug:
+          type: string
+          example: door-closers
+        image_path:
+          type: string
+          nullable: true
+          example: /uploads/catalog/subcategories/door-closers-d4e5f6.jpg
+    PublicCategory:
+      allOf:
+        - $ref: '#/components/schemas/PublicCategorySummary'
+        - type: object
+          properties:
+            subcategories:
+              type: array
+              items:
+                $ref: '#/components/schemas/PublicLinkItem'
+    PublicCategoryDetail:
+      allOf:
+        - $ref: '#/components/schemas/PublicCategorySummary'
+        - type: object
+          properties:
+            subcategories:
+              type: array
+              items:
+                allOf:
+                  - $ref: '#/components/schemas/PublicLinkItem'
+                  - type: object
+                    properties:
+                      description:
+                        type: string
+                        nullable: true
+                        example: Reliable door closers for every door size.
+    PublicSubcategoryDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 5
+        name:
+          type: string
+          example: Door Closers
+        subtitle:
+          type: string
+          nullable: true
+          example: Overhead and floor springs
+        slug:
+          type: string
+          example: door-closers
+        image_path:
+          type: string
+          nullable: true
+          example: /uploads/catalog/subcategories/door-closers-d4e5f6.jpg
+        description:
+          type: string
+          nullable: true
+          example: Reliable door closers for every door size.
+        category_name:
+          type: string
+          example: Architectural Hardware
+        category_slug:
+          type: string
+          example: architectural-hardware
+        sub_subcategories:
+          type: array
+          description: Active top-level catalog items (items inside a group are not listed here).
+          items:
+            $ref: '#/components/schemas/PublicLinkItem'
+        products:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 7
+              name:
+                type: string
+                example: DORMA TS 93
+              slug:
+                type: string
+                example: dorma-ts-93
+              short_desc:
+                type: string
+                nullable: true
+                example: Cam-action door closer with slide rail.
+              cover_image:
+                type: string
+                nullable: true
+                example: /uploads/products/dorma-ts-93-aabbcc.jpg
+    PublicCatalogItemBase:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 21
+        name:
+          type: string
+          example: Overhead Door Closers
+        slug:
+          type: string
+          example: overhead-door-closers
+        type:
+          type: string
+          enum: [group, product]
+          example: product
+        description:
+          type: string
+          nullable: true
+          example: Cam-action door closers for heavy doors.
+        image_path:
+          type: string
+          nullable: true
+          example: /uploads/catalog/items/overhead-door-closer-7a8b9c.jpg
+        brand_logo:
+          type: string
+          nullable: true
+          example: /uploads/brands/dorma-logo-112233.png
+        subcategory_name:
+          type: string
+          example: Door Closers
+        subcategory_slug:
+          type: string
+          example: door-closers
+        category_name:
+          type: string
+          example: Architectural Hardware
+        category_slug:
+          type: string
+          example: architectural-hardware
+        advantages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Advantage'
+        features:
+          type: array
+          items:
+            $ref: '#/components/schemas/Feature'
+    PublicSubSubcategoryDetail:
+      allOf:
+        - $ref: '#/components/schemas/PublicCatalogItemBase'
+        - type: object
+          properties:
+            children:
+              type: array
+              description: Active child items (only groups have children).
+              items:
+                $ref: '#/components/schemas/PublicLinkItem'
+    PublicSubSubProductDetail:
+      allOf:
+        - $ref: '#/components/schemas/PublicCatalogItemBase'
+        - type: object
+          properties:
+            group_name:
+              type: string
+              example: Overhead Door Closers
+            group_slug:
+              type: string
+              example: overhead-door-closers
+    PublicProductDetail:
+      allOf:
+        - $ref: '#/components/schemas/Product'
+        - type: object
+          properties:
+            subcategory_name:
+              type: string
+              example: Door Closers
+            subcategory_slug:
+              type: string
+              example: door-closers
+            category_name:
+              type: string
+              example: Architectural Hardware
+            category_slug:
+              type: string
+              example: architectural-hardware
+            images:
+              type: array
+              items:
+                type: object
+                properties:
+                  image_path:
+                    type: string
+                    example: /uploads/products/dorma-ts-93-side-ddeeff.jpg
+    PublicProjectPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 12
+              title:
+                type: string
+                example: Park Hyatt Jakarta
+              category:
+                type: string
+                nullable: true
+                example: Hospitality
+              slug:
+                type: string
+                example: park-hyatt-jakarta
+              cover_image:
+                type: string
+                nullable: true
+                example: /uploads/projects/park-hyatt-k3f9a2.jpg
+              published_at:
+                type: string
+                format: date
+                nullable: true
+                example: '2026-10-08'
+        total:
+          type: integer
+          description: Number of active projects in total (all pages).
+          example: 42
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 12
+    PublicPublicationPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 4
+              title:
+                type: string
+                example: New Showroom Opening in Surabaya
+              slug:
+                type: string
+                example: new-showroom-opening-in-surabaya
+              cover_image:
+                type: string
+                nullable: true
+                example: /uploads/publications/showroom-surabaya-334455.jpg
+              published_at:
+                type: string
+                format: date
+                nullable: true
+                example: '2026-10-08'
+        total:
+          type: integer
+          description: Number of active publications in total (all pages).
+          example: 9
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 12
+    PublicDownload:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 6
+        title:
+          type: string
+          example: Door Hardware Catalogue 2026
+        section:
+          type: string
+          example: catalogues
+        description:
+          type: string
+          nullable: true
+          example: Full product range with technical drawings.
+        image_path:
+          type: string
+          nullable: true
+          example: /uploads/downloads/thumbnails/catalogue-2026-556677.jpg
+        file_path:
+          type: string
+          nullable: true
+          example: /uploads/downloads/files/catalogue-2026-889900.pdf
+    PublicServicePage:
+      type: object
+      properties:
+        content_html:
+          type: string
+          nullable: true
+          example: <h2>Installation and maintenance</h2><p>Our team installs every product we sell.</p>
+        hero_image:
+          type: string
+          nullable: true
+          example: /uploads/site/services/services-hero-abcdef.jpg
+    PublicSettings:
+      type: object
+      description: Only these keys can appear; keys that are not set are left out.
+      properties:
+        site_name:
+          type: string
+          nullable: true
+          example: Portfolio CMS
+        contact_email:
+          type: string
+          nullable: true
+          example: info@example.com
+        contact_phone:
+          type: string
+          nullable: true
+          example: '+62 21 555 0100'
+        contact_address:
+          type: string
+          nullable: true
+          example: Jl. Contoh No. 1, Jakarta
+        ga_id:
+          type: string
+          nullable: true
+          example: G-XXXXXXXXXX
+        social_facebook:
+          type: string
+          nullable: true
+          example: https://facebook.com/example
+        social_instagram:
+          type: string
+          nullable: true
+          example: https://instagram.com/example
+        social_linkedin:
+          type: string
+          nullable: true
+          example: https://linkedin.com/company/example
+    PublicNavMenuLink:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 8
+        label:
+          type: string
+          example: Projects
+        url:
+          type: string
+          example: /projects
+    PublicNavMenus:
+      type: object
+      description: The three menus are always present (an empty list when a menu has no active links).
+      required: [header, footer_explore, footer_resources]
+      properties:
+        header:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicNavMenuLink'
+        footer_explore:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicNavMenuLink'
+        footer_resources:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicNavMenuLink'

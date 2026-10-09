@@ -11,9 +11,13 @@ import type { SettingRow } from '../types/database';
 /**
  * Convert a setting value to the text that is saved in the database.
  * Text, numbers and true/false are saved as text; lists and objects as JSON.
- * (Same as the PHP backend)
+ * null is saved as an empty value (NULL), not as the text "null".
  */
-function settingValueToText(value: any): string {
+function settingValueToText(value: any): string | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
   if (typeof value === 'string') {
     return value;
   }
@@ -29,7 +33,7 @@ function settingValueToText(value: any): string {
     return '';
   }
 
-  // null, arrays and objects
+  // arrays and objects
   return JSON.stringify(value);
 }
 

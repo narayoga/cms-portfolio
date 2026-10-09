@@ -4,6 +4,7 @@ import { sendOk, sendError } from '../lib/response';
 import {
   getBody,
   getQueryText,
+  hasValue,
   valueOrFallback,
   toInteger,
   activeFlagForInsert,
@@ -79,6 +80,11 @@ export async function updateNavMenu(request: Request, response: Response) {
     return;
   }
 
+  if (hasValue(body, 'location') && ALLOWED_LOCATIONS.includes(body.location) === false) {
+    sendError(response, 'Invalid location', 422);
+    return;
+  }
+
   await execute(
     'UPDATE nav_menus SET location = ?, label = ?, url = ?, sort_order = ?, is_active = ? WHERE id = ?',
     [
@@ -100,7 +106,11 @@ export async function updateNavMenu(request: Request, response: Response) {
 export async function deleteNavMenu(request: Request, response: Response) {
   const menuLinkId = toInteger(request.params.id);
 
-  await execute('DELETE FROM nav_menus WHERE id = ?', [menuLinkId]);
+  const deletedRowCount = await execute('DELETE FROM nav_menus WHERE id = ?', [menuLinkId]);
+  if (deletedRowCount === 0) {
+    sendError(response, 'Not found', 404);
+    return;
+  }
 
   sendOk(response);
 }

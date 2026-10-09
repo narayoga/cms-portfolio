@@ -106,7 +106,11 @@ export async function updateProject(request: Request, response: Response) {
 export async function deleteProject(request: Request, response: Response) {
   const projectId = toInteger(request.params.id);
 
-  await execute('DELETE FROM projects WHERE id = ?', [projectId]);
+  const deletedRowCount = await execute('DELETE FROM projects WHERE id = ?', [projectId]);
+  if (deletedRowCount === 0) {
+    sendError(response, 'Not found', 404);
+    return;
+  }
 
   sendOk(response);
 }

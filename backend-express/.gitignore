@@ -4,3 +4,4 @@ public/uploads/*
 !public/uploads/.gitkeep
 uploads-unused/
 backups/
+coverage/

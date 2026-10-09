@@ -85,7 +85,11 @@ export async function updateBanner(request: Request, response: Response) {
 export async function deleteBanner(request: Request, response: Response) {
   const bannerId = toInteger(request.params.id);
 
-  await execute('DELETE FROM homepage_banners WHERE id = ?', [bannerId]);
+  const deletedRowCount = await execute('DELETE FROM homepage_banners WHERE id = ?', [bannerId]);
+  if (deletedRowCount === 0) {
+    sendError(response, 'Not found', 404);
+    return;
+  }
 
   sendOk(response);
 }
