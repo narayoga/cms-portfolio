@@ -73,6 +73,41 @@ used in more than one place). `uploads-unused/` holds files that nothing uses.
 To change the structure later, add a new file such as `migrations/001_add_video_url.sql`
 and run `npm run db:migrate`.
 
+## API documentation
+
+Open **http://localhost:8000/api/docs** (Swagger UI) while the backend runs.
+The raw spec is at `/api/docs/openapi.json`; the source file is `docs/openapi.yaml`.
+Set `API_DOCS=off` in `../.env` to hide it.
+
+When you add or change a route in `src/routes.ts`, update `docs/openapi.yaml` too —
+the test `tests/unit/api-docs.test.ts` fails when a route is not documented.
+
+## Tests
+
+| Command | What it runs |
+|---|---|
+| `npm test` | every test |
+| `npm run test:unit` | `tests/unit` — helpers, auth, docs check (no database, fast) |
+| `npm run test:integration` | `tests/integration` — real HTTP requests + the **test** database |
+| `npm run test:watch` | unit tests, re-run on every file change |
+| `npm run test:coverage` | every test + a coverage report in `coverage/` |
+
+The integration tests read the database credentials from **`../.env.test`**
+(never from `../.env`), for example:
+
+```
+DB_HOST=...
+DB_PORT=3306
+DB_NAME=something_test
+DB_USER=...
+DB_PASS=...
+```
+
+⚠ Every run **deletes all tables** in that database, creates them again from
+`migrations/` and adds two users (see `tests/setup/test-users.ts`).
+That is why the tests refuse to run unless `DB_NAME` ends with `_test`.
+Emails are never sent (the mailer is mocked) and uploaded test files are removed afterwards.
+
 ## Other scripts
 
 | Command | What it does |

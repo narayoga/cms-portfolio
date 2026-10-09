@@ -5,7 +5,7 @@ import type { SqlValue } from '../lib/db';
 import { sendOk, sendError } from '../lib/response';
 import { getCurrentUser } from '../lib/auth';
 import { getBody, hasValue, isEmptyValue, toInteger } from '../lib/values';
-import { findMissingField } from '../lib/validator';
+import { findMissingField, isValidEmail } from '../lib/validator';
 
 const ALLOWED_ROLES = ['admin', 'editor'];
 
@@ -35,6 +35,11 @@ export async function createUser(request: Request, response: Response) {
     return;
   }
 
+  if (isValidEmail(body.email) === false) {
+    sendError(response, 'Invalid email', 422);
+    return;
+  }
+
   const userWithSameEmail = await queryOne('SELECT id FROM users WHERE email = ?', [body.email]);
   if (userWithSameEmail !== null) {
     sendError(response, 'Email already exists', 409);
@@ -58,6 +63,34 @@ export async function createUser(request: Request, response: Response) {
 export async function updateUser(request: Request, response: Response) {
   const userId = toInteger(request.params.id);
   const body = getBody(request);
+
+  const existingUser = await queryOne('SELECT id FROM users WHERE id = ?', [userId]);
+  if (existingUser === null) {
+    sendError(response, 'Not found', 404);
+    return;
+  }
+
+  if (hasValue(body, 'role') && ALLOWED_ROLES.includes(body.role) === false) {
+    sendError(response, 'Invalid role', 422);
+    return;
+  }
+
+  if (hasValue(body, 'email')) {
+    if (isValidEmail(body.email) === false) {
+      sendError(response, 'Invalid email', 422);
+      return;
+    }
+
+    // The email may stay the same, but it may not belong to another user
+    const otherUserWithSameEmail = await queryOne('SELECT id FROM users WHERE email = ? AND id <> ?', [
+      body.email,
+      userId,
+    ]);
+    if (otherUserWithSameEmail !== null) {
+      sendError(response, 'Email already exists', 409);
+      return;
+    }
+  }
 
   // Build the "SET name = ?, email = ?" part step by step
   const setParts: string[] = [];
@@ -101,7 +134,11 @@ export async function deleteUser(request: Request, response: Response) {
     return;
   }
 
-  await execute('DELETE FROM users WHERE id = ?', [userId]);
+  const deletedRowCount = await execute('DELETE FROM users WHERE id = ?', [userId]);
+  if (deletedRowCount === 0) {
+    sendError(response, 'Not found', 404);
+    return;
+  }
 
   sendOk(response, { id: userId });
 }

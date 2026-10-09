@@ -93,7 +93,11 @@ export async function updateCategory(request: Request, response: Response) {
 export async function deleteCategory(request: Request, response: Response) {
   const categoryId = toInteger(request.params.id);
 
-  await execute('DELETE FROM categories WHERE id = ?', [categoryId]);
+  const deletedRowCount = await execute('DELETE FROM categories WHERE id = ?', [categoryId]);
+  if (deletedRowCount === 0) {
+    sendError(response, 'Not found', 404);
+    return;
+  }
 
   sendOk(response);
 }

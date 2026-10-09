@@ -95,6 +95,21 @@ export async function makeUniqueSlug(
 }
 
 /**
+ * True when a row with this id exists in the table.
+ * Used to check parent ids (for example category_id) before saving,
+ * so the admin gets a clear 422 message instead of a database error.
+ */
+export async function rowExists(tableName: string, id: number): Promise<boolean> {
+  const row = await queryOne('SELECT id FROM `' + tableName + '` WHERE id = ?', [id]);
+
+  if (row === null) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
  * Check that an email address looks valid.
  */
 export function isValidEmail(email: any): boolean {

@@ -96,7 +96,11 @@ export async function updateDownload(request: Request, response: Response) {
 export async function deleteDownload(request: Request, response: Response) {
   const downloadId = toInteger(request.params.id);
 
-  await execute('DELETE FROM downloads WHERE id = ?', [downloadId]);
+  const deletedRowCount = await execute('DELETE FROM downloads WHERE id = ?', [downloadId]);
+  if (deletedRowCount === 0) {
+    sendError(response, 'Not found', 404);
+    return;
+  }
 
   sendOk(response);
 }

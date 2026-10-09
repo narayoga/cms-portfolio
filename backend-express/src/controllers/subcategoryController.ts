@@ -10,7 +10,7 @@ import {
   activeFlagForInsert,
   activeFlagForUpdate,
 } from '../lib/values';
-import { findMissingField, makeSlug, makeUniqueSlug } from '../lib/validator';
+import { findMissingField, makeSlug, makeUniqueSlug, rowExists } from '../lib/validator';
 import type { SubcategoryRow } from '../types/database';
 
 /**
@@ -41,7 +41,7 @@ export async function listSubcategories(request: Request, response: Response) {
 
 /**
  * POST /api/admin/subcategories
- * Body: { name, category_id, slug?, description?, image_path?, sort_order?, is_active? }
+ * Body: { name, category_id, subtitle?, slug?, description?, image_path?, sort_order?, is_active? }
  */
 export async function createSubcategory(request: Request, response: Response) {
   const body = getBody(request);
@@ -54,6 +54,12 @@ export async function createSubcategory(request: Request, response: Response) {
 
   const categoryId = toInteger(body.category_id);
 
+  const categoryExists = await rowExists('categories', categoryId);
+  if (categoryExists === false) {
+    sendError(response, 'Category not found', 422);
+    return;
+  }
+
   // The slug only has to be unique inside the same category
   const slugSource = valueOrFallback(body, 'slug', body.name);
   const slug = await makeUniqueSlug('subcategories', makeSlug(slugSource), {
@@ -62,10 +68,11 @@ export async function createSubcategory(request: Request, response: Response) {
   });
 
   const newSubcategoryId = await insert(
-    'INSERT INTO subcategories (category_id, name, slug, description, image_path, sort_order, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    'INSERT INTO subcategories (category_id, name, subtitle, slug, description, image_path, sort_order, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
     [
       categoryId,
       body.name,
+      valueOrFallback(body, 'subtitle', null),
       slug,
       valueOrFallback(body, 'description', null),
       valueOrFallback(body, 'image_path', null),
@@ -93,6 +100,12 @@ export async function updateSubcategory(request: Request, response: Response) {
   let categoryId = toInteger(existingSubcategory.category_id);
   if (hasValue(body, 'category_id')) {
     categoryId = toInteger(body.category_id);
+
+    const categoryExists = await rowExists('categories', categoryId);
+    if (categoryExists === false) {
+      sendError(response, 'Category not found', 422);
+      return;
+    }
   }
 
   let slug = existingSubcategory.slug;
@@ -105,10 +118,11 @@ export async function updateSubcategory(request: Request, response: Response) {
   }
 
   await execute(
-    'UPDATE subcategories SET category_id = ?, name = ?, slug = ?, description = ?, image_path = ?, sort_order = ?, is_active = ? WHERE id = ?',
+    'UPDATE subcategories SET category_id = ?, name = ?, subtitle = ?, slug = ?, description = ?, image_path = ?, sort_order = ?, is_active = ? WHERE id = ?',
     [
       categoryId,
       valueOrFallback(body, 'name', existingSubcategory.name),
+      valueOrFallback(body, 'subtitle', existingSubcategory.subtitle),
       slug,
       valueOrFallback(body, 'description', existingSubcategory.description),
       valueOrFallback(body, 'image_path', existingSubcategory.image_path),
@@ -127,7 +141,11 @@ export async function updateSubcategory(request: Request, response: Response) {
 export async function deleteSubcategory(request: Request, response: Response) {
   const subcategoryId = toInteger(request.params.id);
 
-  await execute('DELETE FROM subcategories WHERE id = ?', [subcategoryId]);
+  const deletedRowCount = await execute('DELETE FROM subcategories WHERE id = ?', [subcategoryId]);
+  if (deletedRowCount === 0) {
+    sendError(response, 'Not found', 404);
+    return;
+  }
 
   sendOk(response);
 }

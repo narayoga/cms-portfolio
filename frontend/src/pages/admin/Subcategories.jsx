@@ -3,7 +3,7 @@ import { api } from '../../api/client';
 import Modal from '../../components/admin/Modal.jsx';
 import ImageUpload from '../../components/admin/ImageUpload.jsx';
 
-const blank = { category_id: '', name: '', slug: '', description: '', image_path: '', sort_order: 0, is_active: 1 };
+const blank = { category_id: '', name: '', subtitle: '', slug: '', description: '', image_path: '', sort_order: 0, is_active: 1 };
 
 export default function Subcategories() {
   const [rows, setRows] = useState([]);
@@ -79,6 +79,7 @@ export default function Subcategories() {
             <label><span>Name *</span><input required value={form.name} onChange={set('name')} /></label>
             <label><span>Slug (auto if blank)</span><input value={form.slug || ''} onChange={set('slug')} /></label>
           </div>
+          <label><span>Subtitle (shown under the page title)</span><input value={form.subtitle || ''} onChange={set('subtitle')} /></label>
           <label><span>Description</span><textarea value={form.description || ''} onChange={set('description')} /></label>
           <ImageUpload value={form.image_path} onChange={(v) => setForm(f => ({ ...f, image_path: v }))} folder="catalog/subcategories" />
           <div className="form-row">

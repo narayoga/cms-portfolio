@@ -1,8 +1,10 @@
 import express from 'express';
 import cors from 'cors';
+import swaggerUi from 'swagger-ui-express';
 import type { Request, Response, NextFunction } from 'express';
 import { getEnv, UPLOADS_DIR } from './config/env';
 import { sendError } from './lib/response';
+import { loadApiDocs } from './lib/apiDocs';
 import { router } from './routes';
 
 export const app = express();
@@ -34,6 +36,18 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Serve uploaded files, for example /uploads/projects/park-hyatt.jpg
 app.use('/uploads', express.static(UPLOADS_DIR, { index: false, dotfiles: 'ignore' }));
+
+// API documentation: Swagger UI at /api/docs, the raw spec at /api/docs/openapi.json
+// Set API_DOCS=off in .env to hide it.
+if (getEnv('API_DOCS', 'on') !== 'off') {
+  const apiDocs = loadApiDocs();
+
+  app.get('/api/docs/openapi.json', function sendApiDocs(request: Request, response: Response) {
+    response.json(apiDocs);
+  });
+
+  app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(apiDocs, { customSiteTitle: 'Portfolio CMS API' }));
+}
 
 // All API routes
 app.use(router);

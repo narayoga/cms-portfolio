@@ -12,7 +12,7 @@ import {
   activeFlagForInsert,
   activeFlagForUpdate,
 } from '../lib/values';
-import { findMissingField, makeSlug, makeUniqueSlug } from '../lib/validator';
+import { findMissingField, makeSlug, makeUniqueSlug, rowExists } from '../lib/validator';
 import type { ProductRow } from '../types/database';
 
 /**
@@ -79,6 +79,12 @@ export async function createProduct(request: Request, response: Response) {
 
   const subcategoryId = toInteger(body.subcategory_id);
 
+  const subcategoryExists = await rowExists('subcategories', subcategoryId);
+  if (subcategoryExists === false) {
+    sendError(response, 'Subcategory not found', 422);
+    return;
+  }
+
   const slugSource = valueOrFallback(body, 'slug', body.name);
   const slug = await makeUniqueSlug('products', makeSlug(slugSource), {
     scopeColumn: 'subcategory_id',
@@ -121,6 +127,12 @@ export async function updateProduct(request: Request, response: Response) {
   let subcategoryId = toInteger(existingProduct.subcategory_id);
   if (hasValue(body, 'subcategory_id')) {
     subcategoryId = toInteger(body.subcategory_id);
+
+    const subcategoryExists = await rowExists('subcategories', subcategoryId);
+    if (subcategoryExists === false) {
+      sendError(response, 'Subcategory not found', 422);
+      return;
+    }
   }
 
   let slug = existingProduct.slug;
@@ -161,7 +173,11 @@ export async function updateProduct(request: Request, response: Response) {
 export async function deleteProduct(request: Request, response: Response) {
   const productId = toInteger(request.params.id);
 
-  await execute('DELETE FROM products WHERE id = ?', [productId]);
+  const deletedRowCount = await execute('DELETE FROM products WHERE id = ?', [productId]);
+  if (deletedRowCount === 0) {
+    sendError(response, 'Not found', 404);
+    return;
+  }
 
   sendOk(response);
 }

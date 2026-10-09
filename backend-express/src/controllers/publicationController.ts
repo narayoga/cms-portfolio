@@ -91,7 +91,11 @@ export async function updatePublication(request: Request, response: Response) {
 export async function deletePublication(request: Request, response: Response) {
   const publicationId = toInteger(request.params.id);
 
-  await execute('DELETE FROM publications WHERE id = ?', [publicationId]);
+  const deletedRowCount = await execute('DELETE FROM publications WHERE id = ?', [publicationId]);
+  if (deletedRowCount === 0) {
+    sendError(response, 'Not found', 404);
+    return;
+  }
 
   sendOk(response);
 }
