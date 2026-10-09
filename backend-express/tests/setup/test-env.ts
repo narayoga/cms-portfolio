@@ -30,13 +30,17 @@ export function loadTestEnv(): Record<string, string> {
     ...fileValues,
     APP_ENV: 'test',
     // A fixed secret, so tokens in the tests do not depend on the real .env
-    JWT_SECRET: 'test-jwt-secret',
+    JWT_SECRET: 'integration-test-secret-that-is-long-enough',
     JWT_TTL: '3600',
     // The mailer is mocked in the tests, but just in case: never reach a real SMTP server
     SMTP_HOST: 'smtp.invalid',
     SMTP_USER: '',
     SMTP_PASS: '',
     CONTACT_RECIPIENT: 'admin@test.local',
+    // The tests log in and send the contact form many times; only
+    // tests/integration/security.test.ts uses the real (low) limits
+    LOGIN_RATE_LIMIT: '1000',
+    CONTACT_RATE_LIMIT: '1000',
   };
 }
 

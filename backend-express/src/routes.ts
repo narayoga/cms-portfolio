@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { requireLogin, requireAdmin } from './lib/auth';
+import { loginRateLimit, contactRateLimit } from './lib/rateLimit';
 import { sendOk } from './lib/response';
 
 import * as authController from './controllers/authController';
@@ -29,7 +30,7 @@ import * as uploadController from './controllers/uploadController';
 export const router = Router();
 
 // Auth
-router.post('/api/auth/login', authController.login);
+router.post('/api/auth/login', loginRateLimit, authController.login);
 router.get('/api/auth/me', requireLogin, authController.me);
 
 // Public (website)
@@ -48,7 +49,7 @@ router.get('/api/public/downloads', publicController.getDownloads);
 router.get('/api/public/service', publicController.getServicePage);
 router.get('/api/public/settings', publicController.getPublicSettings);
 router.get('/api/public/nav-menus', publicController.getNavMenus);
-router.post('/api/public/contact', contactController.submitContactForm);
+router.post('/api/public/contact', contactRateLimit, contactController.submitContactForm);
 
 // Admin: users (admin only)
 router.get('/api/admin/users', requireAdmin, userController.listUsers);

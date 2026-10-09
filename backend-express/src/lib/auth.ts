@@ -21,8 +21,55 @@ type UserForToken = {
   email: string;
 };
 
+// A shorter secret can be guessed by trying many values
+const MINIMUM_SECRET_LENGTH = 32;
+
+// Secrets that are written in this public repository (old defaults and examples).
+// Anyone can read them, so anyone could create a valid admin token with them.
+const PUBLIC_SECRETS = ['dev-secret', 'change-me', 'secret'];
+
+/**
+ * Check a JWT secret. Returns what is wrong with it, or null when it is safe.
+ */
+export function findJwtSecretProblem(secret: string): string | null {
+  if (secret === '') {
+    return 'JWT_SECRET is not set in .env';
+  }
+
+  if (PUBLIC_SECRETS.includes(secret)) {
+    return 'JWT_SECRET uses a value that is public in the repository ("' + secret + '")';
+  }
+
+  if (secret.length < MINIMUM_SECRET_LENGTH) {
+    return (
+      'JWT_SECRET is too short (' + secret.length + ' characters, at least ' + MINIMUM_SECRET_LENGTH + ' are needed)'
+    );
+  }
+
+  return null;
+}
+
+/**
+ * The secret used to sign and check login tokens.
+ * There is NO default value: without a safe secret, no token can be created or accepted.
+ */
 function getJwtSecret(): string {
-  return getEnv('JWT_SECRET', 'dev-secret');
+  const secret = getEnv('JWT_SECRET', '');
+
+  const problem = findJwtSecretProblem(secret);
+  if (problem !== null) {
+    throw new Error(problem);
+  }
+
+  return secret;
+}
+
+/**
+ * Called when the server starts: stop right away when the secret is missing or unsafe.
+ * (Generate a good secret with:  node -e "console.log(require('crypto').randomBytes(48).toString('hex'))")
+ */
+export function assertJwtSecretIsSafe(): void {
+  getJwtSecret();
 }
 
 /**

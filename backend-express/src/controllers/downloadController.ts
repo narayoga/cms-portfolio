@@ -3,6 +3,7 @@ import { queryAll, queryOne, insert, execute } from '../lib/db';
 import { sendOk, sendError } from '../lib/response';
 import {
   getBody,
+  hasValue,
   valueOrFallback,
   toInteger,
   activeFlagForInsert,
@@ -12,17 +13,6 @@ import { findMissingField } from '../lib/validator';
 import type { DownloadRow } from '../types/database';
 
 const ALLOWED_SECTIONS = ['catalogues', 'manuals'];
-
-/**
- * Return the section when it is allowed, otherwise "catalogues".
- */
-function chooseSection(requestedSection: any): string {
-  if (ALLOWED_SECTIONS.includes(requestedSection)) {
-    return requestedSection;
-  }
-
-  return 'catalogues';
-}
 
 /**
  * GET /api/admin/downloads
@@ -44,11 +34,18 @@ export async function createDownload(request: Request, response: Response) {
     return;
   }
 
+  // A new download goes to "catalogues" unless another section is chosen
+  const section = valueOrFallback(body, 'section', 'catalogues');
+  if (ALLOWED_SECTIONS.includes(section) === false) {
+    sendError(response, 'Invalid section', 422);
+    return;
+  }
+
   const newDownloadId = await insert(
     'INSERT INTO downloads (title, section, description, image_path, file_path, sort_order, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)',
     [
       body.title,
-      chooseSection(valueOrFallback(body, 'section', 'catalogues')),
+      section,
       valueOrFallback(body, 'description', null),
       valueOrFallback(body, 'image_path', null),
       valueOrFallback(body, 'file_path', null),
@@ -73,11 +70,16 @@ export async function updateDownload(request: Request, response: Response) {
     return;
   }
 
+  if (hasValue(body, 'section') && ALLOWED_SECTIONS.includes(body.section) === false) {
+    sendError(response, 'Invalid section', 422);
+    return;
+  }
+
   await execute(
     'UPDATE downloads SET title = ?, section = ?, description = ?, image_path = ?, file_path = ?, sort_order = ?, is_active = ? WHERE id = ?',
     [
       valueOrFallback(body, 'title', existingDownload.title),
-      chooseSection(valueOrFallback(body, 'section', existingDownload.section)),
+      valueOrFallback(body, 'section', existingDownload.section),
       valueOrFallback(body, 'description', existingDownload.description),
       valueOrFallback(body, 'image_path', existingDownload.image_path),
       valueOrFallback(body, 'file_path', existingDownload.file_path),

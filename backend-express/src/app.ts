@@ -1,16 +1,14 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import swaggerUi from 'swagger-ui-express';
 import type { Request, Response, NextFunction } from 'express';
-import { getEnv, UPLOADS_DIR } from './config/env';
+import { getEnv, getEnvNumber, UPLOADS_DIR } from './config/env';
 import { sendError } from './lib/response';
 import { loadApiDocs } from './lib/apiDocs';
 import { router } from './routes';
 
 export const app = express();
-
-// Don't tell visitors which framework we use
-app.disable('x-powered-by');
 
 // CORS: allow the frontend to call this API
 app.use(
@@ -22,13 +20,25 @@ app.use(
   })
 );
 
-// Basic security headers (same as the PHP .htaccess file)
-app.use(function addSecurityHeaders(request: Request, response: Response, next: NextFunction) {
-  response.setHeader('X-Content-Type-Options', 'nosniff');
-  response.setHeader('X-Frame-Options', 'SAMEORIGIN');
-  response.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  next();
-});
+// Behind a reverse proxy (nginx, hosting panel, Cloudflare), read the visitor's real IP
+// from the X-Forwarded-For header. TRUST_PROXY = how many proxies are in front (usually 1).
+// Needed for the rate limits: without it every visitor looks like the proxy's IP.
+const trustedProxyCount = getEnvNumber('TRUST_PROXY', 0);
+if (trustedProxyCount > 0) {
+  app.set('trust proxy', trustedProxyCount);
+}
+
+// Security headers (Helmet): Content-Security-Policy, Strict-Transport-Security,
+// X-Content-Type-Options, X-Frame-Options and more
+app.use(
+  helmet({
+    // The website runs on another domain than this API (example.com vs api.example.com)
+    // and must be allowed to show images from /uploads
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    // Same value as before (Helmet's default would be "no-referrer")
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  })
+);
 
 // Read JSON bodies and normal form bodies
 app.use(express.json({ limit: '10mb' }));

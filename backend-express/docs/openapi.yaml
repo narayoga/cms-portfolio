@@ -32,6 +32,14 @@ info:
     - `404 Not found` - the URL does not exist.
     - `500 Server error` or `500 Database connection failed`.
 
+    ## Rate limits
+
+    Two routes are limited per IP address, and answer `429` when the limit is reached
+    (the `Retry-After` header says how many seconds to wait):
+
+    - **POST /api/auth/login** - 10 failed logins per 15 minutes (successful logins are not counted).
+    - **POST /api/public/contact** - 5 messages per hour.
+
     ## How to log in
 
     1. Open **POST /api/auth/login** below, click **Try it out**, enter your email and password, and click **Execute**.
@@ -141,6 +149,15 @@ paths:
                 error: Invalid credentials
         '422':
           $ref: '#/components/responses/ValidationError'
+        '429':
+          description: "Too many failed logins from this IP (default 10 per 15 minutes; successful logins are not counted). The Retry-After header says how many seconds to wait."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                ok: false
+                error: "Too many login attempts, please try again later"
         '500':
           $ref: '#/components/responses/ServerError'
 
@@ -582,6 +599,15 @@ paths:
                   value:
                     ok: false
                     error: Invalid email
+        '429':
+          description: "Too many messages from this IP (default 5 per hour). The Retry-After header says how many seconds to wait."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                ok: false
+                error: "Too many messages, please try again later"
         '500':
           description: The email could not be sent.
           content:
@@ -1098,6 +1124,10 @@ paths:
                   value:
                     ok: false
                     error: "Parent must be in the same subcategory"
+                example6:
+                  value:
+                    ok: false
+                    error: "Invalid type"
         '500':
           $ref: '#/components/responses/ServerError'
 
@@ -1178,6 +1208,10 @@ paths:
                   value:
                     ok: false
                     error: "An item cannot be its own parent"
+                example6:
+                  value:
+                    ok: false
+                    error: "Invalid type"
         '500':
           $ref: '#/components/responses/ServerError'
     delete:
@@ -1610,7 +1644,7 @@ paths:
     post:
       tags: [Downloads]
       summary: Create a download
-      description: An unknown section is saved as "catalogues".
+      description: "section defaults to \"catalogues\" when it is not sent."
       operationId: createDownload
       security:
         - bearerAuth: []
@@ -1630,7 +1664,20 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '422':
-          $ref: '#/components/responses/ValidationError'
+          description: "The title is missing, or section is not \"catalogues\" or \"manuals\"."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                example1:
+                  value:
+                    ok: false
+                    error: "Missing field: title"
+                example2:
+                  value:
+                    ok: false
+                    error: "Invalid section"
         '500':
           $ref: '#/components/responses/ServerError'
 
@@ -1659,6 +1706,15 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+        '422':
+          description: "section is not \"catalogues\" or \"manuals\"."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                ok: false
+                error: "Invalid section"
         '500':
           $ref: '#/components/responses/ServerError'
     delete:
@@ -2842,7 +2898,7 @@ components:
           type: string
           enum: [group, product]
           default: product
-          description: Any other value is saved as "product".
+          description: Any other value is rejected (422 Invalid type).
         slug:
           type: string
           description: Optional. Made from the name when empty; must be unique inside the subcategory.
@@ -3206,7 +3262,7 @@ components:
           type: string
           enum: [catalogues, manuals]
           default: catalogues
-          description: Any other value is saved as "catalogues".
+          description: Any other value is rejected (422 Invalid section).
         description:
           type: string
           nullable: true
