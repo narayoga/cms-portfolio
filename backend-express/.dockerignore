@@ -1,0 +1,7 @@
+node_modules
+coverage
+backups
+uploads-unused
+public/uploads
+tests
+.env
