@@ -1,0 +1,13 @@
+{
+  // Static SPA deploy: Cloudflare Workers only serves the built files in dist/.
+  // Having this file stops `wrangler deploy` from trying to auto-configure Vite
+  // (that auto-setup needs Vite 6+, and this project uses Vite 5).
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cms-portfolio",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    // React Router: unknown paths like /admin/products fall back to index.html
+    "not_found_handling": "single-page-application"
+  }
+}
