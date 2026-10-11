@@ -54,8 +54,9 @@ jobs:
             docker run -d \
               --name cms-portfolio-backend \
               --restart unless-stopped \
-              --env-file ~/cms-api/.env \
+              --env-file /opt/cms-portfolio/.env.prod \
               -p 127.0.0.1:8000:8000 \
-              -v ~/cms-api/uploads:/app/public/uploads \
+              -v /opt/cms-portfolio/uploads:/app/public/uploads \
+              --memory 384m \
               ${{ env.IMAGE_NAME }}:latest
             docker image prune -f
