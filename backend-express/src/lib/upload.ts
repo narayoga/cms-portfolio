@@ -1,10 +1,10 @@
 import path from 'node:path';
-import fs from 'node:fs/promises';
 import crypto from 'node:crypto';
 import multer from 'multer';
 import sharp from 'sharp';
 import type { Request, Response } from 'express';
-import { getEnvNumber, UPLOADS_DIR } from '../config/env';
+import { getEnvNumber } from '../config/env';
+import { storeFile } from './storage';
 
 /**
  * File uploads from the admin panel.
@@ -161,14 +161,10 @@ export async function saveUploadedFile(
   }
 
   // Create the folder when it does not exist yet
-  const targetFolder = path.join(UPLOADS_DIR, folder);
-  await fs.mkdir(targetFolder, { recursive: true });
-
   const fileName = makeFileName(uploadedFile.originalname) + '.' + extension;
-  const targetPath = path.join(targetFolder, fileName);
 
   const optimizedContent = await optimizeImage(uploadedFile.buffer, extension);
-  await fs.writeFile(targetPath, optimizedContent);
+  await storeFile(folder + '/' + fileName, optimizedContent, extension);
 
   return '/uploads/' + folder + '/' + fileName;
 }
