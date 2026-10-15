@@ -9,8 +9,10 @@
 }
 
 /* On the product page the global nav is NOT fixed: it sits in normal flow
-   and scrolls away, letting the product header take over the top. */
-body.pdp-mode .site-header { position: static; }
+   and scrolls away, letting the product header take over the top.
+   `relative` (not `static`) so its z-index still applies — otherwise the
+   page content paints over the mega menu dropdown. */
+body.pdp-mode .site-header { position: relative; z-index: 100; }
 body.pdp-mode main { padding-top: 0 !important; }
 
 /* ── Product header (sticks to the very top after the nav scrolls away) ── */
